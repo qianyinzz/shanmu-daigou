@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem *)",
+      "PowerShell(New-Item *)",
+      "PowerShell(pnpm run *)",
+      "Bash(npx tsc *)",
+      "PowerShell(curl *)",
+      "Bash(curl *)",
+      "PowerShell(Get-Item *)",
+      "Bash(python3 -c \"import psycopg2; print\\('psycopg2 available'\\)\")",
+      "Bash(python3 -c \"import psycopg; print\\('psycopg available'\\)\")",
+      "Bash(npx --yes pg -v)",
+      "Bash(python3 -c \"import pg8000; print\\('pg8000 available'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python3 *)",
+      "Bash(nslookup *)",
+      "Bash(dig db.dmconkcntwbdgyigwnkg.supabase.co +short)",
+      "Bash(host db.dmconkcntwbdgyigwnkg.supabase.co)",
+      "Bash(pip --version)",
+      "Bash(/d/Anaconda3/python.exe *)",
+      "Bash(npx supabase *)",
+      "Bash(node *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm run *)",
+      "Bash(npx tsx *)",
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

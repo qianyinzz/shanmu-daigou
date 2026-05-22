@@ -1,0 +1,56 @@
+{
+  "name": "projects",
+  "version": "1.0.0",
+  "description": "Vanilla TypeScript application with Express + Vite (HTML + CSS + TS + Node API)",
+  "scripts": {
+    "build": "bash ./scripts/build.sh",
+    "dev": "bash ./scripts/dev.sh",
+    "preinstall": "npx only-allow pnpm",
+    "lint": "eslint",
+    "lint:build": "eslint . --quiet",
+    "start": "bash ./scripts/start.sh",
+    "ts-check": "tsc -p tsconfig.json",
+    "validate": "pnpm run --parallel '/^(ts-check|lint:build)$/'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.95.3",
+    "dotenv": "^17.2.4",
+    "express": "^4.21.2",
+    "lucide-react": "^1.16.0",
+    "motion": "^12.40.0",
+    "multer": "^2.1.1",
+    "pg": "^8.21.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/express": "^5.0.0",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "coze-coding-dev-sdk": "^0.7.23",
+    "drizzle-orm": "^0.45.2",
+    "esbuild": "^0.24.2",
+    "eslint": "^9",
+    "only-allow": "^1.2.2",
+    "tailwindcss": "^4.3.0",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8",
+    "vite": "^6.4.2"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "pnpm": ">=9.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.27.2",
+      "is-generator-function": "1.0.10"
+    }
+  }
+}
