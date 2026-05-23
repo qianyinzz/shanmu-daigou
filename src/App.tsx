@@ -130,7 +130,7 @@ export default function App() {
       setLoading(true);
       const isAdmin = window.location.hash === '#/admin';
       const tasks: Promise<unknown>[] = [loadProducts(), loadCategories()];
-      if (isAdmin) tasks.push(loadOrders());
+      if (isAdmin && api.getAuthToken()) tasks.push(loadOrders());
       await Promise.all(tasks);
       // Load cart from localStorage (user-specific, not synced to DB)
       try {
@@ -142,9 +142,9 @@ export default function App() {
     init();
   }, [loadProducts, loadOrders, loadCategories]);
 
-  // Load orders when entering admin mode
+  // Load orders when entering admin mode (only if authenticated)
   useEffect(() => {
-    if (isAdminMode) loadOrders();
+    if (isAdminMode && api.getAuthToken()) loadOrders();
   }, [isAdminMode, loadOrders]);
 
   // --- PERSISTENCE (Cart only uses localStorage) ---
