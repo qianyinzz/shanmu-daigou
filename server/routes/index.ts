@@ -1,30 +1,45 @@
 // ABOUTME: API 路由 - 商品管理、订单管理、图片上传
 import { Router, type Request, type Response } from 'express';
 import { getSupabaseClient } from '../src/storage/database/supabase-client';
-import { S3Storage } from 'coze-coding-dev-sdk';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 import { verifyPassword, generateToken, changePassword, authMiddleware } from '../middleware/auth';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const storage = new S3Storage({
-  endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL,
-  accessKey: "",
-  secretKey: "",
-  bucketName: process.env.COZE_BUCKET_NAME,
-  region: "cn-beijing",
+const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'products';
+
+// 登录频率限制: 每 IP 每分钟最多 5 次
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { success: false, error: '登录尝试过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
+
+// 全局 API 限流: 每 IP 每秒最多 30 次
+const apiLimiter = rateLimit({
+  windowMs: 1000,
+  max: 30,
+  message: { success: false, error: '请求过于频繁' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.use('/api', apiLimiter);
 
 // ==================== 认证 API ====================
 
-// 管理员登录
-router.post('/api/auth/login', (req: Request, res: Response) => {
+// 管理员登录（带频率限制）
+router.post('/api/auth/login', loginLimiter, async (req: Request, res: Response) => {
   const { password } = req.body;
   if (!password || typeof password !== 'string') {
     res.status(400).json({ success: false, error: '请提供密码' });
     return;
   }
-  if (!verifyPassword(password)) {
+  const valid = await verifyPassword(password);
+  if (!valid) {
     res.status(401).json({ success: false, error: '密码错误' });
     return;
   }
@@ -33,13 +48,13 @@ router.post('/api/auth/login', (req: Request, res: Response) => {
 });
 
 // 修改管理员密码
-router.put('/api/auth/password', authMiddleware, (req: Request, res: Response) => {
+router.put('/api/auth/password', authMiddleware, async (req: Request, res: Response) => {
   const { oldPassword, newPassword } = req.body;
   if (!oldPassword || !newPassword || typeof oldPassword !== 'string' || typeof newPassword !== 'string') {
     res.status(400).json({ success: false, error: '请提供原密码和新密码' });
     return;
   }
-  const newToken = changePassword(oldPassword, newPassword);
+  const newToken = await changePassword(oldPassword, newPassword);
   if (!newToken) {
     res.status(400).json({ success: false, error: '原密码不正确或新密码少于4位' });
     return;
@@ -78,7 +93,7 @@ router.get('/api/products', async (req: Request, res: Response) => {
     const pageSize = parseInt(req.query.pageSize as string) || 50;
     const offset = (page - 1) * pageSize;
 
-    let query = client
+    const query = client
       .from('products')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: true })
@@ -96,12 +111,10 @@ router.get('/api/products', async (req: Request, res: Response) => {
           return { ...p, image_url: key };
         }
         try {
-          const imageUrl = await storage.generatePresignedUrl({
-            key,
-            expireTime: 3600,
-          });
-          return { ...p, image_url: imageUrl };
-        } catch {
+          const { data: signed } = await client.storage.from(BUCKET).createSignedUrl(key, 3600);
+          return { ...p, image_url: signed?.signedUrl || null };
+        } catch (signErr) {
+          console.error('Signed URL generation failed:', signErr);
           return { ...p, image_url: null };
         }
       }
@@ -126,7 +139,7 @@ router.post('/api/products', authMiddleware, async (req: Request, res: Response)
     const client = getSupabaseClient();
     const { data, error } = await client
       .from('products')
-      .insert({ name, category, price: String(price), unit, stock: stock || 0, image_key: image_key || null, description: description || null })
+      .insert({ name, category, price: Number(price), unit, stock: stock || 0, image_key: image_key || null, description: description || null })
       .select()
       .single();
     if (error) throw new Error(`新增商品失败: ${error.message}`);
@@ -154,7 +167,7 @@ router.put('/api/products/:id', authMiddleware, async (req: Request, res: Respon
       res.status(400).json({ success: false, error: '无有效更新字段' });
       return;
     }
-    if (updates.price !== undefined) updates.price = String(updates.price);
+    if (updates.price !== undefined) updates.price = Number(updates.price);
     if (updates.stock !== undefined) updates.stock = Number(updates.stock);
     updates.updated_at = new Date().toISOString();
 
@@ -194,7 +207,7 @@ router.delete('/api/products/:id', authMiddleware, async (req: Request, res: Res
 
     // 删除关联的对象存储图片
     if (product?.image_key) {
-      try { await storage.deleteFile({ fileKey: product.image_key as string }); } catch { /* ignore */ }
+      try { await client.storage.from(BUCKET).remove([product.image_key as string]); } catch (cleanupErr) { console.error('Storage cleanup error:', cleanupErr); }
     }
     res.json({ success: true });
   } catch (err) {
@@ -213,13 +226,12 @@ router.post('/api/upload', authMiddleware, upload.single('file'), async (req: Re
     }
     const ext = file.originalname.split('.').pop() || 'jpg';
     const fileName = `products/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const key = await storage.uploadFile({
-      fileContent: file.buffer,
-      fileName,
-      contentType: file.mimetype,
-    });
-    const imageUrl = await storage.generatePresignedUrl({ key, expireTime: 3600 });
-    res.json({ success: true, data: { key, url: imageUrl } });
+    const client = getSupabaseClient();
+    const { data: uploadData, error: uploadErr } = await client.storage.from(BUCKET).upload(fileName, file.buffer, { contentType: file.mimetype });
+    if (uploadErr) throw new Error(`上传图片失败: ${uploadErr.message}`);
+    const key = uploadData.path;
+    const { data: signed } = await client.storage.from(BUCKET).createSignedUrl(key, 3600);
+    res.json({ success: true, data: { key, url: signed?.signedUrl || '' } });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ success: false, error: message });
@@ -241,10 +253,10 @@ router.post('/api/products/seed', authMiddleware, async (req: Request, res: Resp
       const { data: oldProducts } = await client.from('products').select('image_key');
       for (const p of (oldProducts || [])) {
         if (p.image_key) {
-          try { await storage.deleteFile({ fileKey: p.image_key as string }); } catch { /* ignore */ }
+          try { await client.storage.from(BUCKET).remove([p.image_key as string]); } catch (cleanupErr) { console.error('Storage cleanup error:', cleanupErr); }
         }
       }
-    } catch { /* ignore */ }
+    } catch (cleanupErr) { console.error('Storage cleanup error:', cleanupErr); }
 
     // 2. 清空旧商品数据
     await client.from('products').delete().neq('id', 0);
@@ -253,7 +265,7 @@ router.post('/api/products/seed', authMiddleware, async (req: Request, res: Resp
     const rows = products.map((p: Record<string, unknown>) => ({
       name: p.name,
       category: p.category,
-      price: String(p.price),
+      price: Number(p.price),
       unit: p.unit,
       stock: Number(p.stock ?? 99),
       image_key: (p.image_key as string) || null,
@@ -308,119 +320,23 @@ router.post('/api/orders', async (req: Request, res: Response) => {
 
     const client = getSupabaseClient();
 
-    // 优先使用 PostgreSQL 事务函数 (RPC)
-    try {
-      const { data, error } = await client.rpc('create_order_with_inventory', {
-        p_phone: phone,
-        p_location: location || null,
-        p_delivery_method: delivery_method || 'pickup',
-        p_total_price: String(total_price),
-        p_service_fee: String(service_fee),
-        p_grand_total: String(grand_total),
-        p_items: items.map((item: Record<string, unknown>) => ({
-          product_id: Number(item.product_id),
-          product_name: String(item.product_name),
-          price: String(item.price),
-          quantity: Number(item.quantity),
-        })),
-      });
+    const { data, error } = await client.rpc('create_order_with_inventory', {
+      p_phone: phone,
+      p_location: location || null,
+      p_delivery_method: delivery_method || 'pickup',
+      p_total_price: Number(total_price),
+      p_service_fee: Number(service_fee),
+      p_grand_total: Number(grand_total),
+      p_items: items.map((item: Record<string, unknown>) => ({
+        product_id: Number(item.product_id),
+        product_name: String(item.product_name),
+        price: String(item.price),
+        quantity: Number(item.quantity),
+      })),
+    });
 
-      if (error) {
-        // RPC 不可用时回退到应用层逻辑
-        throw error;
-      }
-      res.json({ success: true, data });
-      return;
-    } catch (rpcErr) {
-      // 如果 RPC 函数不存在，回退到分步操作（带补偿逻辑）
-      console.warn('RPC 不可用，使用应用层回退:', (rpcErr as Error).message);
-    }
-
-    // --- 应用层回退: 分步创建订单 + 库存扣减 ---
-    const orderNo = `SM${Date.now()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-
-    const { data: order, error: orderError } = await client
-      .from('orders')
-      .insert({
-        order_no: orderNo,
-        phone,
-        location: location || null,
-        delivery_method: delivery_method || 'pickup',
-        total_price: String(total_price),
-        service_fee: String(service_fee),
-        grand_total: String(grand_total),
-      })
-      .select()
-      .single();
-    if (orderError) throw new Error(`创建订单失败: ${orderError.message}`);
-
-    const orderId = (order as Record<string, unknown>).id;
-
-    // 创建订单明细 & 扣减库存
-    const rollbackItems: Array<{ productId: number; quantity: number }> = [];
-    try {
-      for (const item of items as Array<Record<string, unknown>>) {
-        // 插入订单明细
-        const { error: itemsError } = await client.from('order_items').insert({
-          order_id: orderId,
-          product_id: Number(item.product_id),
-          product_name: String(item.product_name),
-          price: String(item.price),
-          quantity: Number(item.quantity),
-        });
-        if (itemsError) throw new Error(`创建订单明细失败: ${itemsError.message}`);
-
-        // 扣减库存
-        const { data: prod, error: prodErr } = await client
-          .from('products')
-          .select('stock')
-          .eq('id', Number(item.product_id))
-          .maybeSingle();
-        if (prodErr) throw new Error(`查询库存失败: ${prodErr.message}`);
-
-        if (!prod) throw new Error(`商品 ${item.product_id} 不存在`);
-        const currentStock = Number(prod.stock);
-        const deductQty = Number(item.quantity);
-        if (currentStock < deductQty) {
-          throw new Error(`商品 ${item.product_name} 库存不足 (当前: ${currentStock}, 请求: ${deductQty})`);
-        }
-
-        const newStock = currentStock - deductQty;
-        const { error: updErr } = await client
-          .from('products')
-          .update({ stock: newStock, updated_at: new Date().toISOString() })
-          .eq('id', Number(item.product_id));
-        if (updErr) throw new Error(`扣减库存失败: ${updErr.message}`);
-
-        rollbackItems.push({ productId: Number(item.product_id), quantity: deductQty });
-      }
-    } catch (innerErr) {
-      // 补偿回滚: 恢复已扣库存 + 删除已创建明细
-      for (const rb of rollbackItems) {
-        try {
-          const { data: cur } = await client.from('products').select('stock').eq('id', rb.productId).maybeSingle();
-          if (cur) {
-            await client.from('products').update({
-              stock: Number(cur.stock) + rb.quantity,
-              updated_at: new Date().toISOString(),
-            }).eq('id', rb.productId);
-          }
-        } catch { /* ignore compensation errors */ }
-      }
-      try { await client.from('order_items').delete().eq('order_id', orderId); } catch { /* ignore */ }
-      try { await client.from('orders').delete().eq('id', orderId); } catch { /* ignore */ }
-      throw innerErr;
-    }
-
-    // 返回完整订单
-    const { data: fullOrder, error: fetchErr } = await client
-      .from('orders')
-      .select('*, order_items(*)')
-      .eq('id', orderId)
-      .single();
-    if (fetchErr) throw new Error(`获取订单失败: ${fetchErr.message}`);
-
-    res.json({ success: true, data: fullOrder });
+    if (error) throw new Error(`创建订单失败: ${error.message}`);
+    res.json({ success: true, data });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ success: false, error: message });
@@ -576,7 +492,7 @@ router.delete('/api/orders', authMiddleware, async (_req: Request, res: Response
 router.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
-    env: process.env.COZE_PROJECT_ENV,
+    env: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
   });
 });

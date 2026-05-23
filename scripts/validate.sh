@@ -1,10 +1,9 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
+cd "$(dirname "$0")/.."
 
-cd "${COZE_WORKSPACE_PATH}"
-
-echo "🔍 Running validate..."
+echo "Running TypeScript check and lint..."
 pnpm validate
-echo "✅ Validate passed!"
+
+echo "Validation passed!"

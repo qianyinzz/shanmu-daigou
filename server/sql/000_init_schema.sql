@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS products (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'bakery',
-  price TEXT NOT NULL DEFAULT '0',
+  price NUMERIC(10,2) NOT NULL DEFAULT 0,
   unit TEXT NOT NULL DEFAULT '份',
   stock INTEGER NOT NULL DEFAULT 99,
   image_key TEXT,
@@ -29,9 +29,9 @@ CREATE TABLE IF NOT EXISTS orders (
   location TEXT,
   delivery_method TEXT DEFAULT 'pickup',
   status TEXT NOT NULL DEFAULT 'pending',
-  total_price TEXT NOT NULL DEFAULT '0',
-  service_fee TEXT NOT NULL DEFAULT '0',
-  grand_total TEXT NOT NULL DEFAULT '0',
+  total_price NUMERIC(10,2) NOT NULL DEFAULT 0,
+  service_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
+  grand_total NUMERIC(10,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   product_id BIGINT NOT NULL,
   product_name TEXT NOT NULL,
-  price TEXT NOT NULL DEFAULT '0',
+  price NUMERIC(10,2) NOT NULL DEFAULT 0,
   quantity INTEGER NOT NULL DEFAULT 1
 );
 
@@ -56,9 +56,9 @@ CREATE OR REPLACE FUNCTION create_order_with_inventory(
   p_phone text,
   p_location text,
   p_delivery_method text,
-  p_total_price text,
-  p_service_fee text,
-  p_grand_total text,
+  p_total_price numeric,
+  p_service_fee numeric,
+  p_grand_total numeric,
   p_items jsonb
 )
 RETURNS jsonb

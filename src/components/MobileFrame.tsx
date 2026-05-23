@@ -15,7 +15,7 @@ interface MobileFrameProps {
 }
 
 export default function MobileFrame({ children, isAdminMode, onExitAdmin }: MobileFrameProps) {
-  const [isMobileMode, setIsMobileMode] = useState(true);
+  const isMobileMode = true;
 
   // Admin password gate state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -48,7 +48,8 @@ export default function MobileFrame({ children, isAdminMode, onExitAdmin }: Mobi
       setShowPasswordModal(false);
       setPasswordInput('');
       sessionStorage.setItem('sam_admin_authed', '1');
-    } catch {
+    } catch (loginErr) {
+      console.error('Login error:', loginErr);
       setPasswordError('密码错误，请重试');
     } finally {
       setLoginLoading(false);

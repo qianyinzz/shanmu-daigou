@@ -6,13 +6,11 @@
 import { useState, useMemo, useRef, type FormEvent } from 'react';
 import { Product, Order, CATEGORIES } from '../types';
 import * as api from '../api';
-import { PROXY_FEE_RATE } from '../utils';
-import { Plus, Trash2, ClipboardList, PackagePlus, RotateCcw, Image, ShoppingBag, Lock, BarChart3, Download, MapPin, TrendingUp, Package, Filter, Upload, X, Pencil } from 'lucide-react';
+import { Trash2, ClipboardList, PackagePlus, RotateCcw, ShoppingBag, Lock, BarChart3, Download, MapPin, TrendingUp, Package, Filter, Upload, X, Pencil } from 'lucide-react';
 
 interface AdminPanelProps {
   products: Product[];
   orders: Order[];
-  onDeleteProduct: (id: string) => void;
   onClearOrders: () => void;
   onResetToDefaults: () => void;
   onDataChange: () => void;
@@ -21,7 +19,6 @@ interface AdminPanelProps {
 export default function AdminPanel({
   products,
   orders,
-  onDeleteProduct,
   onClearOrders,
   onResetToDefaults,
   onDataChange,
@@ -177,16 +174,13 @@ export default function AdminPanel({
   const [imageKey, setImageKey] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const uploadingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [description, setDescription] = useState('');
   const [badge, setBadge] = useState('');
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState(false);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
-
-  // Preset Unsplash links (for fallback)
-  const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=600';
 
   const startEditProduct = (p: Product) => {
     setEditingProductId(Number(p.id));
@@ -255,7 +249,7 @@ export default function AdminPanel({
     // Upload image file if selected
     if (imageFile) {
       try {
-        setUploadingImage(true);
+        uploadingRef.current = true;
         const result = await api.uploadImage(imageFile);
         finalImageKey = result.key;
         setImageKey(finalImageKey);
@@ -263,10 +257,10 @@ export default function AdminPanel({
       } catch (err) {
         console.error('图片上传失败:', err);
         setFormError('图片上传失败，请重试');
-        setUploadingImage(false);
+        uploadingRef.current = false;
         return;
       }
-      setUploadingImage(false);
+      uploadingRef.current = false;
     }
 
     try {
@@ -275,7 +269,7 @@ export default function AdminPanel({
         const updates: Record<string, unknown> = {
           name: name.trim(),
           category,
-          price: String(numericalPrice),
+          price: numericalPrice,
           unit: '份',
           stock: numericalStock,
           description: description.trim() || '山姆精选代购商品。由于商品抢购火爆，请在下单后向代购确认具体交货时效。',
@@ -289,7 +283,7 @@ export default function AdminPanel({
         await api.createProduct({
           name: name.trim(),
           category,
-          price: String(numericalPrice),
+          price: numericalPrice,
           unit: '份',
           stock: numericalStock,
           image_key: finalImageKey || null,
@@ -338,7 +332,7 @@ export default function AdminPanel({
     const val = parseFloat(newPriceStr);
     if (!isNaN(val) && val >= 0) {
       try {
-        await api.updateProduct(Number(p.id), { price: String(val) });
+        await api.updateProduct(Number(p.id), { price: val });
         await onDataChange();
       } catch (err) {
         console.error('更新价格失败:', err);

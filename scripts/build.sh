@@ -1,12 +1,10 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
-
-cd "${COZE_WORKSPACE_PATH}"
+cd "$(dirname "$0")/.."
 
 echo "Installing dependencies..."
-pnpm install --prefer-frozen-lockfile --prefer-offline --loglevel debug --reporter=append-only
+pnpm install --prefer-frozen-lockfile
 
 echo "Building frontend with Vite..."
 pnpm vite build

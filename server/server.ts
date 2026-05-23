@@ -6,7 +6,7 @@ import express from 'express';
 import router from './routes/index';
 import { setupVite } from './vite';
 
-const isDev = process.env.COZE_PROJECT_ENV !== 'PROD';
+const isDev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT || '5000', 10);
 const hostname = process.env.HOSTNAME || 'localhost';
 const app = express();
@@ -38,6 +38,7 @@ async function startServer(): Promise<Server> {
 
   // 全局错误处理
   app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    void _next;
     console.error('Server error:', err);
     const status = 'status' in err ? (err as { status?: number }).status ?? 500 : 500;
     res.status(status).json({

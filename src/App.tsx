@@ -22,7 +22,7 @@ function rowToProduct(row: api.ProductRow): Product {
     id: String(row.id),
     name: row.name,
     category: row.category,
-    price: Number(row.price),
+    price: row.price,
     image: row.image_url || '',
     description: row.description || '',
     stock: row.stock,
@@ -49,12 +49,12 @@ function rowToOrder(row: api.OrderRow): Order {
     items: (row.order_items || []).map(oi => ({
       productId: String(oi.product_id),
       name: oi.product_name,
-      price: Number(oi.price),
+      price: oi.price,
       quantity: oi.quantity,
     })),
-    totalPrice: Number(row.total_price),
-    proxyFee: Number(row.service_fee),
-    grandTotal: Number(row.grand_total),
+    totalPrice: row.total_price,
+    proxyFee: row.service_fee,
+    grandTotal: row.grand_total,
     createdAt: row.created_at,
     deliveryMethod: (dm === 'express' || dm === 'pickup') ? dm : 'pickup',
     location: row.location || undefined,
@@ -123,7 +123,7 @@ export default function App() {
       try {
         const storedCart = localStorage.getItem('sam_buyer_cart');
         if (storedCart) setCartItems(JSON.parse(storedCart));
-      } catch { /* ignore */ }
+      } catch (parseErr) { console.error('Cart parse error:', parseErr); }
       setLoading(false);
     }
     init();
@@ -164,7 +164,8 @@ export default function App() {
         saveCartToLocal([...cartItems, { product: { ...product, stock: currentStock }, quantity: 1 }]);
       }
       triggerToast(`🛒 "${product.name}" 已加购`);
-    } catch {
+    } catch (stockErr) {
+      console.error('Stock check failed, using cached stock:', stockErr);
       // 降级：使用本地缓存的库存
       if (product.stock <= 0) {
         triggerToast('⚠️ 抱歉，该商品库存不足');
@@ -250,19 +251,6 @@ export default function App() {
 
   // --- ADMIN PANEL BACK-OFFICE CONTROLS ---
 
-  const handleDeleteProduct = async (productId: string) => {
-    try {
-      await api.deleteProduct(Number(productId));
-      await loadProducts();
-      // Clean deleted item from active cart if any
-      const updatedCart = cartItems.filter((item) => item.product.id !== productId);
-      saveCartToLocal(updatedCart);
-    } catch (err) {
-      console.error('删除商品失败:', err);
-      triggerToast('❌ 删除失败');
-    }
-  };
-
   const handleClearOrders = async () => {
     try {
       await api.clearOrders();
@@ -342,7 +330,6 @@ export default function App() {
         <AdminPanel
           products={products}
           orders={orders}
-          onDeleteProduct={handleDeleteProduct}
           onClearOrders={handleClearOrders}
           onResetToDefaults={handleResetToDefaults}
           onDataChange={async () => { await Promise.all([loadProducts(), loadOrders()]); }}

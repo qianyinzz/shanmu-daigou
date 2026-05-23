@@ -22,7 +22,7 @@ export interface ProductRow {
   id: number;
   name: string;
   category: string;
-  price: string;
+  price: number;
   unit: string;
   stock: number;
   image_key: string | null;
@@ -37,7 +37,7 @@ export interface OrderItemRow {
   order_id: number;
   product_id: number;
   product_name: string;
-  price: string;
+  price: number;
   quantity: number;
 }
 
@@ -48,9 +48,9 @@ export interface OrderRow {
   location: string | null;
   delivery_method: string | null;
   status: 'pending' | 'completed' | 'cancelled';
-  total_price: string;
-  service_fee: string;
-  grand_total: string;
+  total_price: number;
+  service_fee: number;
+  grand_total: number;
   created_at: string;
   order_items: OrderItemRow[];
 }
