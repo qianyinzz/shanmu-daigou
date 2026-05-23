@@ -24,8 +24,13 @@ async function getPasswordHash(): Promise<string> {
   return passwordHash;
 }
 
+let cachedTokenSecret: string | null = null;
+
 function getTokenSecret(): string {
-  return process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+  if (!cachedTokenSecret) {
+    cachedTokenSecret = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+  }
+  return cachedTokenSecret;
 }
 
 function signPayload(payload: string, secret: string): string {
