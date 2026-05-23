@@ -3,7 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Product } from './types';
+import { Product, type Category } from './types';
+
+export const DEFAULT_CATEGORIES: Category[] = [
+  { id: 'bakery', name: '烘焙糕点', icon: '🍰', sort_order: 1 },
+  { id: 'deli', name: '熟食速食', icon: '🔥', sort_order: 2 },
+  { id: 'fresh', name: '生鲜果蔬', icon: '🍎', sort_order: 3 },
+  { id: 'drinks', name: '酒水饮料', icon: '☕', sort_order: 4 },
+  { id: 'snacks', name: '休闲零食', icon: '🍪', sort_order: 5 },
+];
 
 export const INITIAL_PRODUCTS: Product[] = [
   {

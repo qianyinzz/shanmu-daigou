@@ -62,6 +62,130 @@ router.put('/api/auth/password', authMiddleware, async (req: Request, res: Respo
   res.json({ success: true, data: { token: newToken } });
 });
 
+// ==================== 分类 API ====================
+
+// 获取所有分类
+router.get('/api/categories', async (_req: Request, res: Response) => {
+  try {
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (error) throw new Error(`查询分类失败: ${error.message}`);
+    res.json({ success: true, data: data || [] });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+// 新增分类
+router.post('/api/categories', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id, name, icon, sort_order } = req.body;
+    if (!id || !name) {
+      res.status(400).json({ success: false, error: '缺少必填字段(id, name)' });
+      return;
+    }
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('categories')
+      .insert({ id: String(id), name, icon: icon || '📦', sort_order: Number(sort_order ?? 0) })
+      .select()
+      .single();
+    if (error) throw new Error(`新增分类失败: ${error.message}`);
+    res.json({ success: true, data });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+// 更新分类
+router.put('/api/categories/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const allowedFields = ['name', 'icon', 'sort_order'];
+    const raw = req.body as Record<string, unknown>;
+    const updates: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (raw[key] !== undefined) {
+        updates[key] = raw[key];
+      }
+    }
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ success: false, error: '无有效更新字段' });
+      return;
+    }
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('categories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(`更新分类失败: ${error.message}`);
+    res.json({ success: true, data });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+// 删除分类
+router.delete('/api/categories/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const client = getSupabaseClient();
+    // 检查是否有商品引用此分类
+    const { count } = await client
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('category', id);
+    if (count && count > 0) {
+      res.status(400).json({ success: false, error: `该分类下有 ${count} 件商品，无法删除` });
+      return;
+    }
+    const { error } = await client
+      .from('categories')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(`删除分类失败: ${error.message}`);
+    res.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+// 初始化分类数据
+router.post('/api/categories/seed', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { categories } = req.body;
+    if (!Array.isArray(categories) || categories.length === 0) {
+      res.status(400).json({ success: false, error: '分类数据为空' });
+      return;
+    }
+    const client = getSupabaseClient();
+    // 清空旧数据
+    await client.from('categories').delete().neq('id', '');
+    // 插入新数据
+    const rows = categories.map((c: Record<string, unknown>) => ({
+      id: String(c.id),
+      name: String(c.name),
+      icon: String(c.icon || '📦'),
+      sort_order: Number(c.sort_order ?? 0),
+    }));
+    const { data, error } = await client.from('categories').insert(rows).select();
+    if (error) throw new Error(`导入分类失败: ${error.message}`);
+    res.json({ success: true, data, count: data?.length });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
 // ==================== 商品 API ====================
 
 // 查询单个商品库存

@@ -41,6 +41,13 @@ export interface OrderItemRow {
   quantity: number;
 }
 
+export interface CategoryRow {
+  id: string;
+  name: string;
+  icon: string;
+  sort_order: number;
+}
+
 export interface OrderRow {
   id: number;
   order_no: string;
@@ -231,4 +238,34 @@ export async function fetchAnalytics(): Promise<AnalyticsData> {
 
 export async function clearOrders(): Promise<void> {
   await request<void>('/api/orders', { method: 'DELETE' });
+}
+
+// ========== 分类 API ==========
+export async function fetchCategories(): Promise<CategoryRow[]> {
+  return request<CategoryRow[]>('/api/categories');
+}
+
+export async function createCategory(cat: { id: string; name: string; icon?: string; sort_order?: number }): Promise<CategoryRow> {
+  return request<CategoryRow>('/api/categories', {
+    method: 'POST',
+    body: JSON.stringify(cat),
+  });
+}
+
+export async function updateCategory(id: string, updates: { name?: string; icon?: string; sort_order?: number }): Promise<CategoryRow> {
+  return request<CategoryRow>(`/api/categories/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await request<void>(`/api/categories/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function seedCategories(cats: Array<{ id: string; name: string; icon: string; sort_order: number }>): Promise<{ count: number }> {
+  return request<{ count: number }>('/api/categories/seed', {
+    method: 'POST',
+    body: JSON.stringify({ categories: cats }),
+  });
 }

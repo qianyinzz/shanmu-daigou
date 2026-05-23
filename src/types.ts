@@ -53,11 +53,17 @@ export const PICKUP_LOCATIONS = [
   '光明站点',
 ] as const;
 
-export const CATEGORIES = [
-  { id: 'all', name: '全部商品', icon: 'Store' },
-  { id: 'bakery', name: '烘焙糕点', icon: 'Cake' },
-  { id: 'deli', name: '熟食速食', icon: 'Flame' },
-  { id: 'fresh', name: '生鲜果蔬', icon: 'Apple' },
-  { id: 'drinks', name: '酒水饮料', icon: 'Coffee' },
-  { id: 'snacks', name: '休闲零食', icon: 'Cookie' },
-];
+export interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  sort_order: number;
+}
+
+/** 前端内置的"全部商品"筛选项，不属于数据库分类 */
+export const ALL_CATEGORY: Category = {
+  id: 'all',
+  name: '全部商品',
+  icon: '📋',
+  sort_order: 0,
+};

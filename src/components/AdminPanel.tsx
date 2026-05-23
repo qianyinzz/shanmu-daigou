@@ -4,13 +4,14 @@
  */
 
 import { useState, useMemo, useRef, type FormEvent } from 'react';
-import { Product, Order, CATEGORIES } from '../types';
+import { Product, Order, type Category } from '../types';
 import * as api from '../api';
-import { Trash2, ClipboardList, PackagePlus, RotateCcw, ShoppingBag, Lock, BarChart3, Download, MapPin, TrendingUp, Package, Filter, Upload, X, Pencil } from 'lucide-react';
+import { Trash2, ClipboardList, PackagePlus, RotateCcw, ShoppingBag, Lock, BarChart3, Download, MapPin, TrendingUp, Package, Filter, Upload, X, Pencil, Tag } from 'lucide-react';
 
 interface AdminPanelProps {
   products: Product[];
   orders: Order[];
+  categories: Category[];
   onClearOrders: () => void;
   onResetToDefaults: () => void;
   onDataChange: () => void;
@@ -19,11 +20,12 @@ interface AdminPanelProps {
 export default function AdminPanel({
   products,
   orders,
+  categories,
   onClearOrders,
   onResetToDefaults,
   onDataChange,
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'analytics' | 'add'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'analytics' | 'categories' | 'add'>('products');
 
   // Password change state
   const [showPwdChange, setShowPwdChange] = useState(false);
@@ -58,6 +60,75 @@ export default function AdminPanel({
       }, 1500);
     } catch (err) {
       setPwdMsg({ type: 'err', text: (err as Error).message || '修改密码失败' });
+    }
+  };
+
+  // Category form state
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [catId, setCatId] = useState('');
+  const [catName, setCatName] = useState('');
+  const [catIcon, setCatIcon] = useState('📦');
+  const [catSortOrder, setCatSortOrder] = useState('0');
+  const [catFormError, setCatFormError] = useState('');
+  const [catFormSuccess, setCatFormSuccess] = useState(false);
+
+  const startEditCategory = (cat: Category) => {
+    setEditingCatId(cat.id);
+    setCatId(cat.id);
+    setCatName(cat.name);
+    setCatIcon(cat.icon);
+    setCatSortOrder(String(cat.sort_order));
+    setCatFormError('');
+    setCatFormSuccess(false);
+    setActiveTab('categories');
+  };
+
+  const cancelCategoryEdit = () => {
+    setEditingCatId(null);
+    setCatId('');
+    setCatName('');
+    setCatIcon('📦');
+    setCatSortOrder('0');
+    setCatFormError('');
+    setCatFormSuccess(false);
+  };
+
+  const handleCategorySubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setCatFormError('');
+    setCatFormSuccess(false);
+
+    if (!catId.trim() || !catName.trim()) {
+      setCatFormError('请填写分类ID和名称');
+      return;
+    }
+
+    const sortOrder = parseInt(catSortOrder) || 0;
+
+    try {
+      if (editingCatId) {
+        await api.updateCategory(editingCatId, { name: catName.trim(), icon: catIcon, sort_order: sortOrder });
+      } else {
+        await api.createCategory({ id: catId.trim(), name: catName.trim(), icon: catIcon, sort_order: sortOrder });
+      }
+      await onDataChange();
+      setCatFormSuccess(true);
+      cancelCategoryEdit();
+      setTimeout(() => setCatFormSuccess(false), 1500);
+    } catch (err) {
+      console.error('保存分类失败:', err);
+      setCatFormError((err as Error).message || '保存分类失败');
+    }
+  };
+
+  const handleDeleteCategory = async (cat: Category) => {
+    if (!window.confirm(`确认删除分类"${cat.name}"？如果该分类下有商品则无法删除。`)) return;
+    try {
+      await api.deleteCategory(cat.id);
+      await onDataChange();
+    } catch (err) {
+      console.error('删除分类失败:', err);
+      alert((err as Error).message || '删除分类失败');
     }
   };
 
@@ -470,6 +541,18 @@ export default function AdminPanel({
         </button>
 
         <button
+          onClick={() => setActiveTab('categories')}
+          className={`flex-1 py-3 text-center font-bold tracking-wide transition-colors border-b-2 flex items-center justify-center gap-1 ${
+            activeTab === 'categories'
+              ? 'border-sky-500 text-sky-600 font-extrabold bg-sky-50/20'
+              : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+          }`}
+        >
+          <Tag size={14} />
+          <span>分类 ({categories.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('add')}
           className={`flex-1 py-3 text-center font-bold tracking-wide transition-colors border-b-2 flex items-center justify-center gap-1 ${
             activeTab === 'add'
@@ -515,7 +598,8 @@ export default function AdminPanel({
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded shrink-0">
-                          {CATEGORIES.find((cat) => cat.id === p.category)?.name || '其它'}
+                          {categories.find((cat) => cat.id === p.category)?.icon}{' '}
+                          {categories.find((cat) => cat.id === p.category)?.name || '其它'}
                         </span>
                         <h4 className="font-extrabold text-slate-800 text-xs truncate">{p.name}</h4>
                       </div>
@@ -902,6 +986,135 @@ export default function AdminPanel({
           </div>
         )}
 
+        {/* ===== Categories Manager View ===== */}
+        {activeTab === 'categories' && (
+          <div className="space-y-4 pb-8">
+            <h3 className="font-bold text-slate-700 text-xs uppercase tracking-wider border-l-4 border-sky-500 pl-2">
+              商品分类管理
+            </h3>
+
+            {/* Category list */}
+            <div className="space-y-2">
+              {categories.length === 0 ? (
+                <div className="bg-white rounded-xl p-6 border border-slate-200 text-center text-slate-400">
+                  <p className="text-xs font-semibold">暂无分类，请添加</p>
+                </div>
+              ) : (
+                categories.map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="bg-white rounded-xl p-3 border border-slate-200 shadow-xs flex items-center gap-3"
+                  >
+                    <span className="text-2xl">{cat.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-extrabold text-slate-800 text-xs">{cat.name}</h4>
+                      <p className="text-[10px] text-slate-400 font-mono">ID: {cat.id} · 排序: {cat.sort_order}</p>
+                    </div>
+                    <button
+                      onClick={() => startEditCategory(cat)}
+                      className="p-1.5 rounded-lg bg-sky-50 text-sky-500 hover:bg-sky-100 transition-colors cursor-pointer"
+                      title="编辑分类"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(cat)}
+                      className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors cursor-pointer"
+                      title="删除分类"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Category add/edit form */}
+            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs space-y-3">
+              <h4 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                {editingCatId ? `编辑分类: ${editingCatId}` : '添加新分类'}
+              </h4>
+              <form onSubmit={handleCategorySubmit} className="space-y-2.5 text-xs">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">分类ID (英文标识)</label>
+                    <input
+                      type="text"
+                      value={catId}
+                      onChange={(e) => setCatId(e.target.value)}
+                      placeholder="例: bakery"
+                      disabled={!!editingCatId}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none disabled:opacity-50"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">分类名称</label>
+                    <input
+                      type="text"
+                      value={catName}
+                      onChange={(e) => setCatName(e.target.value)}
+                      placeholder="例: 烘焙糕点"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">图标 (Emoji)</label>
+                    <input
+                      type="text"
+                      value={catIcon}
+                      onChange={(e) => setCatIcon(e.target.value)}
+                      placeholder="🍰"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none text-lg text-center"
+                      maxLength={4}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">排序 (数字越小越前)</label>
+                    <input
+                      type="number"
+                      value={catSortOrder}
+                      onChange={(e) => setCatSortOrder(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {catFormError && (
+                  <div className="text-red-500 text-[10px] bg-red-50 p-2 rounded border border-red-100 font-bold">
+                    {catFormError}
+                  </div>
+                )}
+                {catFormSuccess && (
+                  <div className="text-emerald-700 text-[10px] bg-emerald-50 p-2 rounded border border-emerald-100 font-bold text-center">
+                    分类保存成功
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  {editingCatId && (
+                    <button
+                      type="button"
+                      onClick={cancelCategoryEdit}
+                      className="flex-1 text-[10px] font-bold text-slate-500 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      取消编辑
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="flex-1 bg-sky-500 hover:bg-sky-600 text-white text-[10px] font-extrabold py-2 rounded-lg transition-colors cursor-pointer"
+                  >
+                    {editingCatId ? '保存修改' : '添加分类'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* ===== Add Product Form View ===== */}
         {activeTab === 'add' && (
           <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs space-y-4 pb-8">
@@ -941,9 +1154,9 @@ export default function AdminPanel({
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
-                    {CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
+                    {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
-                        {cat.name}
+                        {cat.icon} {cat.name}
                       </option>
                     ))}
                   </select>

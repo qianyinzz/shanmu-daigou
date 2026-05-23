@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useCallback, type MouseEvent } from 'react';
-import { Product, CartItem, Order, CATEGORIES } from './types';
-import { INITIAL_PRODUCTS } from './data';
+import { Product, CartItem, Order, type Category, ALL_CATEGORY } from './types';
+import { INITIAL_PRODUCTS, DEFAULT_CATEGORIES } from './data';
 import * as api from './api';
 import { PROXY_FEE_RATE } from './utils';
 import MobileFrame from './components/MobileFrame';
@@ -14,7 +14,7 @@ import ProductDetail from './components/ProductDetail';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import AdminPanel from './components/AdminPanel';
-import { Search, ShoppingCart, Store, Cake, Flame, Apple, Coffee, Cookie, AlertCircle } from 'lucide-react';
+import { Search, ShoppingCart, AlertCircle } from 'lucide-react';
 
 /** 将数据库 ProductRow 转为前端 Product */
 function rowToProduct(row: api.ProductRow): Product {
@@ -67,6 +67,7 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Search & Filter Status
@@ -114,11 +115,20 @@ export default function App() {
     }
   }, []);
 
+  const loadCategories = useCallback(async () => {
+    try {
+      const cats = await api.fetchCategories();
+      setCategories(cats);
+    } catch (err) {
+      console.error('加载分类失败:', err);
+      setCategories(DEFAULT_CATEGORIES);
+    }
+  }, []);
+
   useEffect(() => {
     async function init() {
       setLoading(true);
-      await loadProducts();
-      await loadOrders();
+      await Promise.all([loadProducts(), loadOrders(), loadCategories()]);
       // Load cart from localStorage (user-specific, not synced to DB)
       try {
         const storedCart = localStorage.getItem('sam_buyer_cart');
@@ -127,7 +137,7 @@ export default function App() {
       setLoading(false);
     }
     init();
-  }, [loadProducts, loadOrders]);
+  }, [loadProducts, loadOrders, loadCategories]);
 
   // --- PERSISTENCE (Cart only uses localStorage) ---
   const saveCartToLocal = (newCartList: CartItem[]) => {
@@ -264,7 +274,7 @@ export default function App() {
 
   const handleResetToDefaults = async () => {
     try {
-      // Seed initial products to DB
+      await api.seedCategories(DEFAULT_CATEGORIES);
       await api.seedProducts(INITIAL_PRODUCTS.map(p => ({
         name: p.name,
         category: p.category,
@@ -273,7 +283,7 @@ export default function App() {
         stock: p.stock,
         description: p.description,
       })));
-      await loadProducts();
+      await Promise.all([loadProducts(), loadCategories()]);
       saveCartToLocal([]);
       triggerToast('🔄 系统参数成功初始化');
     } catch (err) {
@@ -298,18 +308,9 @@ export default function App() {
   const cartTotalQty = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotalPrice = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
 
-  const getCategoryIcon = (iconName: string) => {
-    const size = 15;
-    switch (iconName) {
-      case 'Store': return <Store size={size} />;
-      case 'Cake': return <Cake size={size} />;
-      case 'Flame': return <Flame size={size} />;
-      case 'Apple': return <Apple size={size} />;
-      case 'Coffee': return <Coffee size={size} />;
-      case 'Cookie': return <Cookie size={size} />;
-      default: return <Store size={size} />;
-    }
-  };
+  const renderCategoryIcon = (icon: string) => (
+    <span style={{ fontSize: 15, lineHeight: 1 }}>{icon}</span>
+  );
 
   if (loading) {
     return (
@@ -330,9 +331,10 @@ export default function App() {
         <AdminPanel
           products={products}
           orders={orders}
+          categories={categories}
           onClearOrders={handleClearOrders}
           onResetToDefaults={handleResetToDefaults}
-          onDataChange={async () => { await Promise.all([loadProducts(), loadOrders()]); }}
+          onDataChange={async () => { await Promise.all([loadProducts(), loadOrders(), loadCategories()]); }}
         />
       ) : (
         <div className="flex-1 flex flex-col relative h-full">
@@ -405,7 +407,7 @@ export default function App() {
             </div>
             {/* Category Pills */}
             <div className="flex gap-1.5 mt-2 overflow-x-auto no-scrollbar pb-1">
-              {CATEGORIES.map((cat) => (
+              {[ALL_CATEGORY, ...categories].map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
@@ -415,7 +417,7 @@ export default function App() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {getCategoryIcon(cat.icon)}
+                  {renderCategoryIcon(cat.icon)}
                   <span>{cat.name}</span>
                   <span className={`text-[10px] ${selectedCategory === cat.id ? 'text-blue-200' : 'text-gray-400'}`}>
                     ({categoryCount(cat.id)})
