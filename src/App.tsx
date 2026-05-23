@@ -22,10 +22,10 @@ function rowToProduct(row: api.ProductRow): Product {
     id: String(row.id),
     name: row.name,
     category: row.category,
-    price: row.price,
+    price: Number(row.price),
     image: row.image_url || '',
     description: row.description || '',
-    stock: row.stock,
+    stock: Number(row.stock),
     limit: 0,
   };
 }
@@ -35,7 +35,7 @@ function orderToApiItems(items: CartItem[]): Array<{ product_id: number; product
   return items.map(item => ({
     product_id: Number(item.product.id),
     product_name: item.product.name,
-    price: item.product.price,
+    price: Number(item.product.price),
     quantity: item.quantity,
   }));
 }
@@ -49,12 +49,12 @@ function rowToOrder(row: api.OrderRow): Order {
     items: (row.order_items || []).map(oi => ({
       productId: String(oi.product_id),
       name: oi.product_name,
-      price: oi.price,
-      quantity: oi.quantity,
+      price: Number(oi.price),
+      quantity: Number(oi.quantity),
     })),
-    totalPrice: row.total_price,
-    proxyFee: row.service_fee,
-    grandTotal: row.grand_total,
+    totalPrice: Number(row.total_price),
+    proxyFee: Number(row.service_fee),
+    grandTotal: Number(row.grand_total),
     createdAt: row.created_at,
     deliveryMethod: (dm === 'express' || dm === 'pickup') ? dm : 'pickup',
     location: row.location || undefined,
