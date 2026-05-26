@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo, useRef, type FormEvent } from 'react';
+import { useState, useMemo, useRef, useEffect, type FormEvent } from 'react';
 import { Product, Order, type Category } from '../types';
 import * as api from '../api';
-import { Trash2, ClipboardList, PackagePlus, RotateCcw, ShoppingBag, Lock, BarChart3, Download, MapPin, TrendingUp, Package, Filter, Upload, X, Pencil, Tag } from 'lucide-react';
+import { Trash2, ClipboardList, PackagePlus, RotateCcw, ShoppingBag, Lock, BarChart3, Download, MapPin, TrendingUp, Package, Filter, Upload, X, Pencil, Tag, ChevronDown } from 'lucide-react';
 
 interface AdminPanelProps {
   products: Product[];
@@ -253,6 +253,20 @@ export default function AdminPanel({
   const [formSuccess, setFormSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+    if (showCategoryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCategoryDropdown]);
 
   const startEditProduct = (p: Product) => {
     setEditingProductId(Number(p.id));
@@ -1156,17 +1170,36 @@ export default function AdminPanel({
                 {/* Categories */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">所属商品分类</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.icon} {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={categoryDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="text-xs">
+                        {categories.find(c => c.id === category)?.icon}{' '}
+                        {categories.find(c => c.id === category)?.name || '选择分类'}
+                      </span>
+                      <ChevronDown size={14} className={`text-slate-400 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showCategoryDropdown && (
+                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+                        {categories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => { setCategory(cat.id); setShowCategoryDropdown(false); }}
+                            className={`w-full text-left px-3 py-2.5 text-xs hover:bg-sky-50 transition-colors flex items-center gap-2 ${
+                              cat.id === category ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-700'
+                            }`}
+                          >
+                            <span>{cat.icon}</span>
+                            <span>{cat.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Popularity Badge text */}
