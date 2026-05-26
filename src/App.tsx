@@ -14,7 +14,7 @@ import ProductDetail from './components/ProductDetail';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import AdminPanel from './components/AdminPanel';
-import { Search, ShoppingCart, AlertCircle } from 'lucide-react';
+import { Search, ShoppingCart, AlertCircle, ChevronDown } from 'lucide-react';
 
 /** 将数据库 ProductRow 转为前端 Product */
 function rowToProduct(row: api.ProductRow): Product {
@@ -73,6 +73,7 @@ export default function App() {
   // Search & Filter Status
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [expandCategories, setExpandCategories] = useState(false);
 
   // Router / Nav State
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -416,24 +417,66 @@ export default function App() {
               />
             </div>
             {/* Category Pills */}
-            <div className="flex gap-1.5 mt-2 overflow-x-auto no-scrollbar pb-1">
-              {[ALL_CATEGORY, ...categories].map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
-                    selectedCategory === cat.id
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {renderCategoryIcon(cat.icon)}
-                  <span>{cat.name}</span>
-                  <span className={`text-[10px] ${selectedCategory === cat.id ? 'text-blue-200' : 'text-gray-400'}`}>
-                    ({categoryCount(cat.id)})
-                  </span>
-                </button>
-              ))}
+            <div className="mt-2">
+              {expandCategories ? (
+                <div className="space-y-1">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[ALL_CATEGORY, ...categories].map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => { setSelectedCategory(cat.id); setExpandCategories(false); }}
+                        className={`flex items-center justify-center gap-1 px-2 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          selectedCategory === cat.id
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {renderCategoryIcon(cat.icon)}
+                        <span>{cat.name}</span>
+                        <span className={`text-[10px] ${selectedCategory === cat.id ? 'text-blue-200' : 'text-gray-400'}`}>
+                          ({categoryCount(cat.id)})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setExpandCategories(false)}
+                    className="w-full text-[10px] text-gray-400 py-1 flex items-center justify-center gap-1 hover:text-gray-600"
+                  >
+                    <ChevronDown size={12} className="rotate-180" />
+                    <span>收起分类</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-1.5 items-center">
+                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1">
+                    {[ALL_CATEGORY, ...categories].map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+                          selectedCategory === cat.id
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {renderCategoryIcon(cat.icon)}
+                        <span>{cat.name}</span>
+                        <span className={`text-[10px] ${selectedCategory === cat.id ? 'text-blue-200' : 'text-gray-400'}`}>
+                          ({categoryCount(cat.id)})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setExpandCategories(true)}
+                    className="shrink-0 w-7 h-7 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 flex items-center justify-center transition-colors"
+                    title="展开全部分类"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
