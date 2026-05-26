@@ -12,9 +12,10 @@ interface MobileFrameProps {
   children: ReactNode;
   isAdminMode: boolean;
   onExitAdmin: () => void;
+  onAuthSuccess?: () => void;
 }
 
-export default function MobileFrame({ children, isAdminMode, onExitAdmin }: MobileFrameProps) {
+export default function MobileFrame({ children, isAdminMode, onExitAdmin, onAuthSuccess }: MobileFrameProps) {
   const isMobileMode = true;
 
   // Admin password gate state
@@ -48,6 +49,7 @@ export default function MobileFrame({ children, isAdminMode, onExitAdmin }: Mobi
       setShowPasswordModal(false);
       setPasswordInput('');
       sessionStorage.setItem('sam_admin_authed', '1');
+      onAuthSuccess?.();
     } catch (loginErr) {
       console.error('Login error:', loginErr);
       setPasswordError('密码错误，请重试');

@@ -82,6 +82,7 @@ export default function App() {
 
   // Success Feedback Toast or Banner
   const [toastMessage, setToastMessage] = useState('');
+  const [adminAuthVersion, setAdminAuthVersion] = useState(0);
 
   // --- HASH ROUTING: #/admin → admin mode ---
   useEffect(() => {
@@ -334,9 +335,10 @@ export default function App() {
   }
 
   return (
-    <MobileFrame isAdminMode={isAdminMode} onExitAdmin={() => { window.location.hash = '#/'; }}>
+    <MobileFrame isAdminMode={isAdminMode} onExitAdmin={() => { window.location.hash = '#/'; }} onAuthSuccess={() => { setAdminAuthVersion(v => v + 1); loadOrders(); }}>
       {isAdminMode ? (
         <AdminPanel
+          key={adminAuthVersion}
           products={products}
           orders={orders}
           categories={categories}

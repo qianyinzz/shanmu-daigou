@@ -25,29 +25,6 @@ export default function AdminPanel({
   onResetToDefaults,
   onDataChange,
 }: AdminPanelProps) {
-  // Auth gate
-  const [authenticated, setAuthenticated] = useState(!!api.getAuthToken());
-  const [loginPwd, setLoginPwd] = useState('');
-  const [loginMsg, setLoginMsg] = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
-
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!loginPwd) return;
-    setLoginLoading(true);
-    setLoginMsg('');
-    try {
-      const token = await api.login(loginPwd);
-      api.setAuthToken(token);
-      setAuthenticated(true);
-      setLoginPwd('');
-      await onDataChange();
-    } catch (err) {
-      setLoginMsg((err as Error).message || '登录失败');
-    }
-    setLoginLoading(false);
-  };
-
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'analytics' | 'categories' | 'add'>('products');
 
   // Password change state
@@ -274,6 +251,7 @@ export default function AdminPanel({
   const [badge, setBadge] = useState('');
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
   const startEditProduct = (p: Product) => {
@@ -313,6 +291,7 @@ export default function AdminPanel({
 
   const handleProductSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setFormError('');
     setFormSuccess(false);
 
@@ -339,6 +318,8 @@ export default function AdminPanel({
       return;
     }
 
+    setSubmitting(true);
+
     let finalImageKey = imageKey.trim();
     // Upload image file if selected
     if (imageFile) {
@@ -352,6 +333,7 @@ export default function AdminPanel({
         console.error('图片上传失败:', err);
         setFormError('图片上传失败，请重试');
         uploadingRef.current = false;
+        setSubmitting(false);
         return;
       }
       uploadingRef.current = false;
@@ -388,7 +370,7 @@ export default function AdminPanel({
       await onDataChange();
       setFormSuccess(true);
       setEditingProductId(null);
-      
+
       setName('');
       setPrice('');
       setOriginalPrice('');
@@ -407,6 +389,8 @@ export default function AdminPanel({
     } catch (err) {
       console.error(editingProductId ? '修改商品失败:' : '添加商品失败:', err);
       setFormError(editingProductId ? '修改商品失败，请重试' : '添加商品失败，请重试');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -443,37 +427,6 @@ export default function AdminPanel({
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-slate-50 font-sans">
-      {/* ===== Auth Gate: 未登录时显示登录表单 ===== */}
-      {!authenticated ? (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <form onSubmit={handleLogin} className="w-full max-w-xs bg-white rounded-2xl p-6 shadow-lg border border-slate-200 space-y-4">
-            <div className="text-center">
-              <div className="text-3xl mb-2">🔐</div>
-              <h3 className="font-extrabold text-slate-800 text-sm">商家后台登录</h3>
-              <p className="text-[11px] text-slate-400 mt-1">请输入管理密码以访问控制台</p>
-            </div>
-            <input
-              type="password"
-              value={loginPwd}
-              onChange={(e) => setLoginPwd(e.target.value)}
-              placeholder="管理密码"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-              autoFocus
-            />
-            {loginMsg && (
-              <p className="text-red-500 text-[11px] bg-red-50 p-2 rounded-lg font-bold text-center">{loginMsg}</p>
-            )}
-            <button
-              type="submit"
-              disabled={loginLoading}
-              className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-sm font-extrabold py-2.5 rounded-xl transition-colors cursor-pointer"
-            >
-              {loginLoading ? '登录中...' : '登录'}
-            </button>
-          </form>
-        </div>
-      ) : (
-        <>
       {/* Top Admin Dashboard Control Rail */}
       <div className="bg-slate-900 text-white px-4 py-2.5 flex flex-wrap gap-2 items-center justify-between shadow-md shrink-0">
         <span className="text-xs font-bold tracking-wider flex items-center gap-1">
@@ -1365,16 +1318,15 @@ export default function AdminPanel({
               {/* Submitting act */}
               <button
                 type="submit"
-                className="w-full bg-sky-500 hover:bg-sky-600 active:scale-98 transition-all text-white text-xs font-extrabold py-2.5 rounded-lg shadow-md cursor-pointer text-center"
+                disabled={submitting}
+                className="w-full bg-sky-500 hover:bg-sky-600 active:scale-98 transition-all text-white text-xs font-extrabold py-2.5 rounded-lg shadow-md cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                ➕ 点击确认加入在售货架
+                {submitting ? '提交中...' : '➕ 点击确认加入在售货架'}
               </button>
             </form>
           </div>
         )}
       </div>
-        </>
-      )}
     </div>
   );
 }
