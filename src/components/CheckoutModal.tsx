@@ -337,6 +337,19 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onSubmitOrde
                     <span>点击一键复制清单</span>
                   </button>
 
+                  {/* QR Code for customer service WeChat */}
+                  <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-4 flex flex-col items-center gap-3 mt-1">
+                    <div className="text-center">
+                      <p className="text-xs font-extrabold text-slate-800">扫码添加客服核销</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">长按识别二维码，添加微信确认订单</p>
+                    </div>
+                    <img
+                      src="/qrcode.jpg"
+                      alt="客服微信二维码"
+                      className="w-40 h-40 rounded-lg border border-slate-100 object-cover"
+                    />
+                  </div>
+
                   <button
                     onClick={onClose}
                     className="col-span-2 border border-slate-200 hover:bg-slate-50 text-slate-600 text-[11px] font-semibold py-2 rounded-xl transition-all cursor-pointer text-center"
