@@ -522,7 +522,7 @@ export default function App() {
                       ¥{(cartTotalPrice * (1 + PROXY_FEE_RATE)).toFixed(1)}
                     </span>
                     <span className="text-[10px] text-slate-400 block mt-0.5 leading-none">
-                      含 ${(PROXY_FEE_RATE * 100).toFixed(0)}% 跑腿费 ¥{(cartTotalPrice * PROXY_FEE_RATE).toFixed(1)}
+                      含 ¥{(PROXY_FEE_RATE * 100).toFixed(0)}% 跑腿费 ¥{(cartTotalPrice * PROXY_FEE_RATE).toFixed(1)}
                     </span>
                   </div>
                 </div>
