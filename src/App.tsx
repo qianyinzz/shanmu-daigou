@@ -14,7 +14,7 @@ import ProductDetail from './components/ProductDetail';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import AdminPanel from './components/AdminPanel';
-import { Search, ShoppingCart, AlertCircle, ChevronDown } from 'lucide-react';
+import { Search, ShoppingCart, AlertCircle, ChevronDown, MessageCircle, X } from 'lucide-react';
 
 /** 将数据库 ProductRow 转为前端 Product */
 function rowToProduct(row: api.ProductRow): Product {
@@ -74,6 +74,7 @@ export default function App() {
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandCategories, setExpandCategories] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   // Router / Nav State
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -374,6 +375,13 @@ export default function App() {
               <span className="text-amber-300 font-extrabold mr-1 shrink-0">❖</span>
               <p>
                 <b>资费说明：</b>代购跑腿代排队劳务服务费按<b>订单商品总额的 8%</b> 收取，提供专业保冷保鲜箱配送。如有疑问请微信对接。
+                <button
+                  onClick={() => setShowQrModal(true)}
+                  className="inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full bg-white/15 hover:bg-white/25 text-white font-bold text-[9px] transition-colors cursor-pointer border border-white/10"
+                >
+                  <MessageCircle size={10} />
+                  扫码加客服
+                </button>
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-white/5">
@@ -540,6 +548,15 @@ export default function App() {
             </div>
           )}
 
+          {/* Floating客服 button */}
+          <button
+            onClick={() => setShowQrModal(true)}
+            className="absolute right-3 bottom-28 z-30 w-11 h-11 rounded-full bg-sky-500 hover:bg-sky-600 text-white shadow-lg flex items-center justify-center transition-all active:scale-95 cursor-pointer border-2 border-white/30"
+            title="扫码加客服"
+          >
+            <MessageCircle size={20} />
+          </button>
+
           {/* Bottom spacer when cart is visible */}
           {cartTotalQty > 0 && <div className="h-20 shrink-0" />}
         </div>
@@ -576,6 +593,38 @@ export default function App() {
       {toastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-gray-900/90 text-white text-sm px-4 py-2.5 rounded-xl shadow-xl backdrop-blur-sm animate-bounce">
           {toastMessage}
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowQrModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden z-10 border border-slate-100">
+            <div className="px-5 pt-5 pb-3 text-center">
+              <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto mb-3">
+                <MessageCircle size={18} />
+              </div>
+              <h3 className="font-extrabold text-slate-800 text-sm">添加客服微信</h3>
+              <p className="text-[11px] text-slate-400 mt-1">扫码添加代购小哥，确认订单及核销</p>
+            </div>
+            <div className="px-5 pb-2 flex justify-center">
+              <img
+                src="/qrcode.jpg"
+                alt="客服微信二维码"
+                className="w-48 h-48 rounded-xl border border-slate-100 object-cover"
+              />
+            </div>
+            <div className="px-5 pb-5 pt-1">
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="w-full py-2.5 text-xs font-bold text-slate-500 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+              >
+                <X size={14} />
+                关闭
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </MobileFrame>
