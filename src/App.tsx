@@ -551,10 +551,11 @@ export default function App() {
           {/* Floating客服 button */}
           <button
             onClick={() => setShowQrModal(true)}
-            className="absolute right-3 bottom-28 z-30 w-11 h-11 rounded-full bg-sky-500 hover:bg-sky-600 text-white shadow-lg flex items-center justify-center transition-all active:scale-95 cursor-pointer border-2 border-white/30"
+            className="absolute right-0 bottom-28 z-30 flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white shadow-lg rounded-l-full pl-3 pr-2.5 py-2 transition-all active:scale-95 cursor-pointer border-2 border-white/30"
             title="扫码加客服"
           >
-            <MessageCircle size={20} />
+            <span className="text-[10px] font-bold whitespace-nowrap">扫码加客服</span>
+            <MessageCircle size={18} />
           </button>
 
           {/* Bottom spacer when cart is visible */}
