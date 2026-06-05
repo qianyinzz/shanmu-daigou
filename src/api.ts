@@ -26,6 +26,7 @@ export interface ProductRow {
   unit: string;
   stock: number;
   sort_order: number;
+  purchase_limit: number;
   image_key: string | null;
   image_url: string | null;
   description: string | null;

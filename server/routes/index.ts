@@ -256,7 +256,7 @@ router.get('/api/products', async (req: Request, res: Response) => {
 // 新增商品
 router.post('/api/products', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { name, category, price, unit, stock, image_key, description } = req.body;
+    const { name, category, price, unit, stock, image_key, description, purchase_limit } = req.body;
     if (!name || !category || !price || !unit) {
       res.status(400).json({ success: false, error: '缺少必填字段' });
       return;
@@ -273,7 +273,7 @@ router.post('/api/products', authMiddleware, async (req: Request, res: Response)
 
     const { data, error } = await client
       .from('products')
-      .insert({ name, category, price: Number(price), unit, stock: stock || 0, image_key: image_key || null, description: description || null, sort_order: nextSort })
+      .insert({ name, category, price: Number(price), unit, stock: stock || 0, image_key: image_key || null, description: description || null, sort_order: nextSort, purchase_limit: Number(purchase_limit) || 0 })
       .select()
       .single();
     if (error) throw new Error(`新增商品失败: ${error.message}`);
@@ -313,7 +313,7 @@ router.put('/api/products/:id', authMiddleware, async (req: Request, res: Respon
   try {
     const { id } = req.params;
     // 字段白名单，防止注入任意字段
-    const allowedFields = ['name', 'category', 'price', 'unit', 'stock', 'image_key', 'description', 'sort_order'];
+    const allowedFields = ['name', 'category', 'price', 'unit', 'stock', 'image_key', 'description', 'sort_order', 'purchase_limit'];
     const raw = req.body as Record<string, unknown>;
     const updates: Record<string, unknown> = {};
     for (const key of allowedFields) {
@@ -328,6 +328,7 @@ router.put('/api/products/:id', authMiddleware, async (req: Request, res: Respon
     if (updates.price !== undefined) updates.price = Number(updates.price);
     if (updates.stock !== undefined) updates.stock = Number(updates.stock);
     if (updates.sort_order !== undefined) updates.sort_order = Number(updates.sort_order);
+    if (updates.purchase_limit !== undefined) updates.purchase_limit = Number(updates.purchase_limit);
     updates.updated_at = new Date().toISOString();
 
     const client = getSupabaseClient();
@@ -430,6 +431,7 @@ router.post('/api/products/seed', authMiddleware, async (req: Request, res: Resp
       image_key: (p.image_key as string) || null,
       description: (p.description as string) || null,
       sort_order: Number(p.sort_order ?? idx),
+      purchase_limit: Number(p.purchase_limit ?? 0),
     }));
     const { data, error } = await client.from('products').insert(rows).select();
     if (error) throw new Error(`导入商品失败: ${error.message}`);

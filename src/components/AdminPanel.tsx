@@ -535,6 +535,7 @@ export default function AdminPanel({
           price: numericalPrice,
           unit: '份',
           stock: numericalStock,
+          purchase_limit: numericalLimit,
           description: description.trim() || '山姆精选代购商品。由于商品抢购火爆，请在下单后向代购确认具体交货时效。',
         };
         if (finalImageKey) {
@@ -549,6 +550,7 @@ export default function AdminPanel({
           price: numericalPrice,
           unit: '份',
           stock: numericalStock,
+          purchase_limit: numericalLimit,
           image_key: finalImageKey || null,
           description: description.trim() || '山姆精选代购商品。由于商品抢购火爆，请在下单后向代购确认具体交货时效。',
         });

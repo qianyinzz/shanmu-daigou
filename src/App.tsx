@@ -26,7 +26,7 @@ function rowToProduct(row: api.ProductRow): Product {
     image: row.image_url || '',
     description: row.description || '',
     stock: Number(row.stock),
-    limit: 0,
+    limit: Number(row.purchase_limit || 0),
   };
 }
 
@@ -213,6 +213,10 @@ export default function App() {
           triggerToast('⚠️ 购物车数量已达当前库存上限');
           return;
         }
+        if (product.limit > 0 && cartItems[existingIndex].quantity >= product.limit) {
+          triggerToast(`⚠️ 抱歉，该商品每人限购 ${product.limit} 件`);
+          return;
+        }
         const updatedCart = [...cartItems];
         updatedCart[existingIndex] = { ...updatedCart[existingIndex], quantity: updatedCart[existingIndex].quantity + 1, product: { ...product, stock: currentStock } };
         saveCartToLocal(updatedCart);
@@ -231,6 +235,10 @@ export default function App() {
       if (existingIndex > -1) {
         if (cartItems[existingIndex].quantity >= product.stock) {
           triggerToast('⚠️ 购物车数量已达当前库存上限');
+          return;
+        }
+        if (product.limit > 0 && cartItems[existingIndex].quantity >= product.limit) {
+          triggerToast(`⚠️ 抱歉，该商品每人限购 ${product.limit} 件`);
           return;
         }
         const updatedCart = [...cartItems];
