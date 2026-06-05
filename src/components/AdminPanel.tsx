@@ -1478,7 +1478,7 @@ export default function AdminPanel({
 
                 {/* Purchase Limits */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">单客购买限额 (0=不限购)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">每日全局限购总量 (0=不限购/每日自动恢复库存)</label>
                   <input
                     type="number"
                     value={limit}

@@ -213,6 +213,11 @@ router.get('/api/products/:id/stock', async (req: Request, res: Response) => {
 router.get('/api/products', async (req: Request, res: Response) => {
   try {
     const client = getSupabaseClient();
+    
+    // 每次获取商品列表前，静默触发一次每日自动恢复库存逻辑
+    // 这个存储过程只会更新那些 purchase_limit > 0 且今天还没恢复过的商品
+    await client.rpc('daily_restock').catch(e => console.error('每日库存重置失败(可能还未创建RPC):', e));
+
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 50;
     const offset = (page - 1) * pageSize;
