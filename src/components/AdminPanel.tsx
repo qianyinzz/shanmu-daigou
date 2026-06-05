@@ -34,7 +34,7 @@ interface AdminPanelProps {
 }
 
 /** 可拖拽排序的单个商品项 */
-function SortableProductItem({ product, index }: { product: Product; index: number }) {
+function SortableProductItem({ product, index, onManualSort }: { product: Product; index: number; onManualSort: (id: string, newIndexStr: string) => void }) {
   const {
     attributes,
     listeners,
@@ -43,6 +43,23 @@ function SortableProductItem({ product, index }: { product: Product; index: numb
     transition,
     isDragging,
   } = useSortable({ id: product.id });
+
+  const [inputValue, setInputValue] = useState(String(index + 1));
+
+  // 当外部索引改变时（例如拖拽后），同步更新输入框的值
+  useEffect(() => {
+    setInputValue(String(index + 1));
+  }, [index]);
+
+  const handleSubmit = () => {
+    // 只有当值真的改变且不为空时才提交
+    if (inputValue.trim() !== '' && inputValue !== String(index + 1)) {
+      onManualSort(product.id, inputValue);
+    } else {
+      // 还原旧值
+      setInputValue(String(index + 1));
+    }
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -71,9 +88,21 @@ function SortableProductItem({ product, index }: { product: Product; index: numb
         <GripVertical size={16} />
       </button>
 
-      <span className="text-[10px] font-mono font-bold text-violet-400 w-5 text-center shrink-0">
-        {index + 1}
-      </span>
+      {/* Manual Sort Input */}
+      <input
+        type="number"
+        min="1"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onBlur={handleSubmit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur();
+          }
+        }}
+        className="text-[11px] font-mono font-bold text-violet-600 bg-violet-50 w-8 py-0.5 text-center shrink-0 border border-violet-200 rounded focus:outline-none focus:border-violet-500 focus:bg-white transition-colors"
+        title="直接输入序号可快速排序"
+      />
 
       <img
         src={product.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=600'}
@@ -358,6 +387,21 @@ export default function AdminPanel({
     const newIndex = sortedProducts.findIndex((p) => p.id === String(over.id));
     if (oldIndex === -1 || newIndex === -1) return;
     setSortedProducts(arrayMove(sortedProducts, oldIndex, newIndex));
+  };
+
+  const handleManualSort = (id: string, newIndexStr: string) => {
+    const parsed = parseInt(newIndexStr, 10);
+    if (isNaN(parsed) || parsed < 1) return;
+    const oldIndex = sortedProducts.findIndex((p) => p.id === id);
+    if (oldIndex === -1) return;
+    
+    // 转换为 0-based index，并限制在合法范围内
+    let newIndex = parsed - 1;
+    newIndex = Math.max(0, Math.min(newIndex, sortedProducts.length - 1));
+    
+    if (oldIndex !== newIndex) {
+      setSortedProducts(arrayMove(sortedProducts, oldIndex, newIndex));
+    }
   };
 
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } });
@@ -769,7 +813,7 @@ export default function AdminPanel({
                 <SortableContext items={sortedProducts.map((p) => p.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-1.5">
                     {sortedProducts.map((p, idx) => (
-                      <SortableProductItem key={p.id} product={p} index={idx} />
+                      <SortableProductItem key={p.id} product={p} index={idx} onManualSort={handleManualSort} />
                     ))}
                   </div>
                 </SortableContext>
