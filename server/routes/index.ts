@@ -284,6 +284,30 @@ router.post('/api/products', authMiddleware, async (req: Request, res: Response)
   }
 });
 
+// 批量调整商品排序
+router.put('/api/products/reorder', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ success: false, error: '缺少排序数据' });
+      return;
+    }
+    const client = getSupabaseClient();
+    // 逐条更新 sort_order
+    for (const item of items as Array<{ id: number; sort_order: number }>) {
+      const { error } = await client
+        .from('products')
+        .update({ sort_order: Number(item.sort_order), updated_at: new Date().toISOString() })
+        .eq('id', Number(item.id));
+      if (error) throw new Error(`更新排序失败 (id=${item.id}): ${error.message}`);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
 // 更新商品
 router.put('/api/products/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -416,29 +440,6 @@ router.post('/api/products/seed', authMiddleware, async (req: Request, res: Resp
   }
 });
 
-// 批量调整商品排序
-router.put('/api/products/reorder', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { items } = req.body;
-    if (!Array.isArray(items) || items.length === 0) {
-      res.status(400).json({ success: false, error: '缺少排序数据' });
-      return;
-    }
-    const client = getSupabaseClient();
-    // 逐条更新 sort_order
-    for (const item of items as Array<{ id: number; sort_order: number }>) {
-      const { error } = await client
-        .from('products')
-        .update({ sort_order: Number(item.sort_order), updated_at: new Date().toISOString() })
-        .eq('id', Number(item.id));
-      if (error) throw new Error(`更新排序失败 (id=${item.id}): ${error.message}`);
-    }
-    res.json({ success: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    res.status(500).json({ success: false, error: message });
-  }
-});
 
 // ==================== 订单 API ====================
 
