@@ -25,6 +25,7 @@ export interface ProductRow {
   price: number;
   unit: string;
   stock: number;
+  sort_order: number;
   image_key: string | null;
   image_url: string | null;
   description: string | null;
@@ -159,7 +160,7 @@ export async function fetchProductStock(id: number): Promise<{ id: number; name:
   return request<{ id: number; name: string; stock: number }>(`/api/products/${id}/stock`);
 }
 
-export async function createProduct(product: Omit<ProductRow, 'id' | 'created_at' | 'updated_at' | 'image_url'>): Promise<ProductRow> {
+export async function createProduct(product: Omit<ProductRow, 'id' | 'created_at' | 'updated_at' | 'image_url' | 'sort_order'>): Promise<ProductRow> {
   return request<ProductRow>('/api/products', {
     method: 'POST',
     body: JSON.stringify(product),
@@ -189,6 +190,13 @@ export async function uploadImage(file: File): Promise<{ key: string; url: strin
     throw new Error(json.error || '上传失败');
   }
   return json.data;
+}
+
+export async function reorderProducts(items: Array<{ id: number; sort_order: number }>): Promise<void> {
+  await request<void>('/api/products/reorder', {
+    method: 'PUT',
+    body: JSON.stringify({ items }),
+  });
 }
 
 export async function seedProducts(products: Array<{ name: string; category: string; price: number; unit: string; stock: number; description?: string }>): Promise<{ count: number }> {

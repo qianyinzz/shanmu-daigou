@@ -220,6 +220,7 @@ router.get('/api/products', async (req: Request, res: Response) => {
     const query = client
       .from('products')
       .select('*', { count: 'exact' })
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
       .range(offset, offset + pageSize - 1);
 
@@ -261,9 +262,18 @@ router.post('/api/products', authMiddleware, async (req: Request, res: Response)
       return;
     }
     const client = getSupabaseClient();
+    // 新商品默认排在最后：取当前最大 sort_order + 1
+    const { data: maxRow } = await client
+      .from('products')
+      .select('sort_order')
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextSort = ((maxRow?.sort_order as number) ?? 0) + 1;
+
     const { data, error } = await client
       .from('products')
-      .insert({ name, category, price: Number(price), unit, stock: stock || 0, image_key: image_key || null, description: description || null })
+      .insert({ name, category, price: Number(price), unit, stock: stock || 0, image_key: image_key || null, description: description || null, sort_order: nextSort })
       .select()
       .single();
     if (error) throw new Error(`新增商品失败: ${error.message}`);
@@ -279,7 +289,7 @@ router.put('/api/products/:id', authMiddleware, async (req: Request, res: Respon
   try {
     const { id } = req.params;
     // 字段白名单，防止注入任意字段
-    const allowedFields = ['name', 'category', 'price', 'unit', 'stock', 'image_key', 'description'];
+    const allowedFields = ['name', 'category', 'price', 'unit', 'stock', 'image_key', 'description', 'sort_order'];
     const raw = req.body as Record<string, unknown>;
     const updates: Record<string, unknown> = {};
     for (const key of allowedFields) {
@@ -293,6 +303,7 @@ router.put('/api/products/:id', authMiddleware, async (req: Request, res: Respon
     }
     if (updates.price !== undefined) updates.price = Number(updates.price);
     if (updates.stock !== undefined) updates.stock = Number(updates.stock);
+    if (updates.sort_order !== undefined) updates.sort_order = Number(updates.sort_order);
     updates.updated_at = new Date().toISOString();
 
     const client = getSupabaseClient();
@@ -386,7 +397,7 @@ router.post('/api/products/seed', authMiddleware, async (req: Request, res: Resp
     await client.from('products').delete().neq('id', 0);
 
     // 3. 插入新数据
-    const rows = products.map((p: Record<string, unknown>) => ({
+    const rows = products.map((p: Record<string, unknown>, idx: number) => ({
       name: p.name,
       category: p.category,
       price: Number(p.price),
@@ -394,10 +405,35 @@ router.post('/api/products/seed', authMiddleware, async (req: Request, res: Resp
       stock: Number(p.stock ?? 99),
       image_key: (p.image_key as string) || null,
       description: (p.description as string) || null,
+      sort_order: Number(p.sort_order ?? idx),
     }));
     const { data, error } = await client.from('products').insert(rows).select();
     if (error) throw new Error(`导入商品失败: ${error.message}`);
     res.json({ success: true, data, count: data?.length });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+// 批量调整商品排序
+router.put('/api/products/reorder', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ success: false, error: '缺少排序数据' });
+      return;
+    }
+    const client = getSupabaseClient();
+    // 逐条更新 sort_order
+    for (const item of items as Array<{ id: number; sort_order: number }>) {
+      const { error } = await client
+        .from('products')
+        .update({ sort_order: Number(item.sort_order), updated_at: new Date().toISOString() })
+        .eq('id', Number(item.id));
+      if (error) throw new Error(`更新排序失败 (id=${item.id}): ${error.message}`);
+    }
+    res.json({ success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ success: false, error: message });

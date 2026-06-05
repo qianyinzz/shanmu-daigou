@@ -6,7 +6,23 @@
 import { useState, useMemo, useRef, useEffect, type FormEvent } from 'react';
 import { Product, Order, type Category } from '../types';
 import * as api from '../api';
-import { Trash2, ClipboardList, PackagePlus, RotateCcw, ShoppingBag, Lock, BarChart3, Download, MapPin, TrendingUp, Package, Filter, Upload, X, Pencil, Tag, ChevronDown } from 'lucide-react';
+import { Trash2, ClipboardList, PackagePlus, RotateCcw, ShoppingBag, Lock, BarChart3, Download, MapPin, TrendingUp, Package, Filter, Upload, X, Pencil, Tag, ChevronDown, GripVertical, Check } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface AdminPanelProps {
   products: Product[];
@@ -15,6 +31,66 @@ interface AdminPanelProps {
   onClearOrders: () => void;
   onResetToDefaults: () => void;
   onDataChange: () => void;
+}
+
+/** 可拖拽排序的单个商品项 */
+function SortableProductItem({ product, index }: { product: Product; index: number }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: product.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    position: 'relative' as const,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white rounded-xl p-2.5 border shadow-xs flex items-center gap-2.5 transition-shadow ${
+        isDragging
+          ? 'border-violet-400 shadow-lg shadow-violet-200/50 ring-2 ring-violet-300/40 opacity-95 scale-[1.02]'
+          : 'border-violet-200'
+      }`}
+    >
+      {/* Drag Handle */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="touch-none p-1.5 rounded-lg bg-violet-50 text-violet-400 hover:bg-violet-100 hover:text-violet-600 transition-colors cursor-grab active:cursor-grabbing shrink-0"
+        title="按住拖拽排序"
+      >
+        <GripVertical size={16} />
+      </button>
+
+      <span className="text-[10px] font-mono font-bold text-violet-400 w-5 text-center shrink-0">
+        {index + 1}
+      </span>
+
+      <img
+        src={product.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=600'}
+        alt={product.name}
+        referrerPolicy="no-referrer"
+        className="w-10 h-10 rounded-lg object-cover bg-slate-50 shrink-0 border border-slate-100"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=600';
+        }}
+      />
+
+      <div className="flex-1 min-w-0">
+        <h4 className="font-extrabold text-slate-800 text-xs truncate">{product.name}</h4>
+        <span className="text-[10px] text-slate-400 font-mono">¥{product.price}</span>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminPanel({
@@ -255,6 +331,59 @@ export default function AdminPanel({
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Product sort mode state
+  const [sortMode, setSortMode] = useState(false);
+  const [sortedProducts, setSortedProducts] = useState<Product[]>([]);
+  const [savingSortOrder, setSavingSortOrder] = useState(false);
+  const [sortSaveSuccess, setSortSaveSuccess] = useState(false);
+
+  // Enter sort mode: copy current products for reordering
+  const enterSortMode = () => {
+    setSortedProducts([...products]);
+    setSortMode(true);
+    setSortSaveSuccess(false);
+  };
+
+  const exitSortMode = () => {
+    setSortMode(false);
+    setSortedProducts([]);
+    setSortSaveSuccess(false);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sortedProducts.findIndex((p) => p.id === String(active.id));
+    const newIndex = sortedProducts.findIndex((p) => p.id === String(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+    setSortedProducts(arrayMove(sortedProducts, oldIndex, newIndex));
+  };
+
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } });
+  const sensors = useSensors(pointerSensor, touchSensor);
+
+  const handleSaveSortOrder = async () => {
+    setSavingSortOrder(true);
+    try {
+      const items = sortedProducts.map((p, idx) => ({
+        id: Number(p.id),
+        sort_order: idx,
+      }));
+      await api.reorderProducts(items);
+      await onDataChange();
+      setSortSaveSuccess(true);
+      setTimeout(() => {
+        exitSortMode();
+      }, 1200);
+    } catch (err) {
+      console.error('保存排序失败:', err);
+      alert('保存排序失败，请重试');
+    } finally {
+      setSavingSortOrder(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -591,14 +720,60 @@ export default function AdminPanel({
         {/* ===== Products Manager View ===== */}
         {activeTab === 'products' && (
           <div className="space-y-3 pb-8">
-            <h3 className="font-bold text-slate-700 text-xs uppercase tracking-wider mb-2 border-l-4 border-sky-500 pl-2">
-              实时商品库存与价格调整 (修改立即生效)
+            <h3 className="font-bold text-slate-700 text-xs uppercase tracking-wider mb-2 border-l-4 border-sky-500 pl-2 flex items-center justify-between">
+              <span>{sortMode ? '拖拽排序模式 — 调整后点“保存排序”' : '实时商品库存与价格调整 (修改立即生效)'}</span>
+              <div className="flex items-center gap-1.5">
+                {!sortMode ? (
+                  <button
+                    onClick={enterSortMode}
+                    className="text-[10px] font-bold text-violet-600 flex items-center gap-1 border border-violet-300 px-2 py-1 rounded-lg hover:bg-violet-50 transition-colors cursor-pointer"
+                  >
+                    <GripVertical size={12} />
+                    <span>排序</span>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={exitSortMode}
+                      className="text-[10px] font-bold text-slate-500 flex items-center gap-1 border border-slate-300 px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      <X size={11} />
+                      <span>取消</span>
+                    </button>
+                    <button
+                      onClick={handleSaveSortOrder}
+                      disabled={savingSortOrder}
+                      className="text-[10px] font-extrabold text-white bg-violet-500 hover:bg-violet-600 flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Check size={11} />
+                      <span>{savingSortOrder ? '保存中...' : '保存排序'}</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </h3>
+
+            {sortSaveSuccess && (
+              <div className="text-emerald-700 text-[10px] bg-emerald-50 p-2 rounded-lg border border-emerald-100 font-bold text-center">
+                ✨ 排序已保存，前台展示顺序已更新！
+              </div>
+            )}
 
             {products.length === 0 ? (
               <div className="bg-white rounded-xl p-8 border border-slate-200 text-center text-slate-400">
                 <p className="text-xs font-semibold">暂无在售商品，点击上方"添品"自主上架！</p>
               </div>
+            ) : sortMode ? (
+              /* === Drag-and-Drop Sort Mode UI === */
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={sortedProducts.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1.5">
+                    {sortedProducts.map((p, idx) => (
+                      <SortableProductItem key={p.id} product={p} index={idx} />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             ) : (
               <div className="space-y-2.5">
                 {products.map((p) => (
