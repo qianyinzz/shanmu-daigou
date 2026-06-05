@@ -6,22 +6,13 @@
 import { Product } from '../types';
 import { X, ShoppingBag, ShieldAlert, Package, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getSalesVolume } from '../utils';
 
 interface ProductDetailProps {
   product: Product | null;
   onClose: () => void;
   onAddToCart: (product: Product) => void;
   onRemoveFromCart: (product: Product) => void;
-  cartQuantity: number;
-}
-
-function getSalesVolume(productId: string): number {
-  let hash = 0;
-  for (let i = 0; i < productId.length; i++) {
-    hash = ((hash << 5) - hash) + productId.charCodeAt(i);
-    hash |= 0;
-  }
-  return 100 + (Math.abs(hash) % 900);
 }
 
 export default function ProductDetail({
@@ -97,7 +88,7 @@ export default function ProductDetail({
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>
-                  近期全网热销 <strong className="text-slate-700 font-mono">{salesVolume}</strong> 件
+                  近期热销 <strong className="text-slate-700 font-mono">{salesVolume}</strong> 件
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium">99% 好评率</span>
               </div>

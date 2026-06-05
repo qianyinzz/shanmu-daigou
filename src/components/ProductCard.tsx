@@ -5,6 +5,7 @@
 
 import { Product } from '../types';
 import { Plus, Flame, Sparkles } from 'lucide-react';
+import { getSalesVolume } from '../utils';
 
 interface ProductCardProps {
   product: Product;
@@ -87,6 +88,11 @@ export default function ProductCard({ product, onSelect, onAddToCart, cartQuanti
           <p className="text-slate-400 text-[10px] line-clamp-2 mt-1 leading-normal">
             {product.description}
           </p>
+          <div className="mt-1.5 flex items-center">
+            <span className="text-[9px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 font-medium">
+              热销 {getSalesVolume(product.id)} 件
+            </span>
+          </div>
         </div>
 
         <div className="mt-2.5 pt-2 border-t border-slate-50 flex items-center justify-between">
