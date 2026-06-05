@@ -29,7 +29,26 @@
       "Bash(gh auth *)",
       "Bash(gh repo *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(pnpm why *)",
+      "PowerShell(pnpm install *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(npx tsc -p tsconfig.json --noEmit 2>&1)",
+      "Bash(Select-Object FullName)",
+      "Bash(git *)",
+      "Bash(Remove-Item *)",
+      "Bash(pnpm remove *)",
+      "Bash(pnpm ts-check *)",
+      "Bash(pnpm lint:build)",
+      "PowerShell(pnpm ts-check *)",
+      "PowerShell(pnpm lint:build *)",
+      "PowerShell(pnpm build *)",
+      "PowerShell(npx vite build)",
+      "Bash(Copy-Item *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5000)",
+      "Bash(taskkill *)",
+      "PowerShell(taskkill *)"
     ]
   }
 }

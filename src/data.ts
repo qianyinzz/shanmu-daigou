@@ -6,18 +6,24 @@
 import { Product, type Category } from './types';
 
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'bakery', name: '烘焙糕点', icon: '🍰', sort_order: 1 },
-  { id: 'deli', name: '熟食速食', icon: '🔥', sort_order: 2 },
-  { id: 'fresh', name: '生鲜果蔬', icon: '🍎', sort_order: 3 },
-  { id: 'drinks', name: '酒水饮料', icon: '☕', sort_order: 4 },
-  { id: 'snacks', name: '休闲零食', icon: '🍪', sort_order: 5 },
+  { id: 'hot', name: '推荐爆款', icon: '🔥', sort_order: 1 },
+  { id: 'dragon_boat', name: '端午礼品', icon: '🎁', sort_order: 2 },
+  { id: 'snacks', name: '休闲零食', icon: '🍪', sort_order: 3 },
+  { id: 'bakery', name: '面包烘焙', icon: '🍞', sort_order: 4 },
+  { id: 'fresh', name: '生鲜水果', icon: '🍎', sort_order: 5 },
+  { id: 'frozen', name: '速食冻品', icon: '🧊', sort_order: 6 },
+  { id: 'grain_oil', name: '粮油干货', icon: '🍚', sort_order: 7 },
+  { id: 'pets', name: '萌宠生活', icon: '🐾', sort_order: 8 },
+  { id: 'baby', name: '母婴用品', icon: '🍼', sort_order: 9 },
+  { id: 'lifestyle', name: '品质生活', icon: '✨', sort_order: 10 },
+  { id: 'drinks', name: '酒水饮料', icon: '🍷', sort_order: 11 },
 ];
 
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'sam-01',
     name: '山姆美式奥尔良烤鸡',
-    category: 'deli',
+    category: 'hot',
     price: 39.8,
     originalPrice: 45.0,
     image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&q=80&w=600',
@@ -41,7 +47,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'sam-03',
     name: '经典芝士肉酱牛肉卷 (3只装)',
-    category: 'deli',
+    category: 'frozen',
     price: 59.9,
     image: 'https://images.unsplash.com/photo-1618083707368-b3823daa2726?auto=format&fit=crop&q=80&w=600',
     description: '超人气熟食！香浓马苏里拉干酪包裹滑嫩牛肉片与浓郁番茄肉酱，酥脆饼皮微波或空气炸锅加热5分钟即享拉丝拉手。',

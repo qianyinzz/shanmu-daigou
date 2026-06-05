@@ -60,10 +60,4 @@ export interface Category {
   sort_order: number;
 }
 
-/** 前端内置的"全部商品"筛选项，不属于数据库分类 */
-export const ALL_CATEGORY: Category = {
-  id: 'all',
-  name: '全部商品',
-  icon: '📋',
-  sort_order: 0,
-};
+

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, type MouseEvent } from 'react';
-import { Product, CartItem, Order, type Category, ALL_CATEGORY } from './types';
+import { Product, CartItem, Order, type Category } from './types';
 import { INITIAL_PRODUCTS, DEFAULT_CATEGORIES } from './data';
 import * as api from './api';
 import { PROXY_FEE_RATE } from './utils';
@@ -67,12 +67,12 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   
   // Search & Filter Status
   const [searchText, setSearchText] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('hot');
   const [expandCategories, setExpandCategories] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
@@ -100,11 +100,14 @@ export default function App() {
   const loadProducts = useCallback(async () => {
     try {
       const rows = await api.fetchProducts();
-      setProducts(rows.map(rowToProduct));
+      const mapped = rows.map(rowToProduct);
+      setProducts(mapped);
+      return mapped;
     } catch (err) {
       console.error('加载商品失败:', err);
       // Fallback to initial data and seed
       setProducts(INITIAL_PRODUCTS);
+      return INITIAL_PRODUCTS;
     }
   }, []);
 
@@ -130,17 +133,49 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
-      setLoading(true);
+      setIsFetchingData(true);
       const isAdmin = window.location.hash === '#/admin';
-      const tasks: Promise<unknown>[] = [loadProducts(), loadCategories()];
+      
+      // 初次快速加载本地购物车，避免等待网络请求时购物车无数据
+      try {
+        const storedCart = localStorage.getItem('sam_buyer_cart');
+        if (storedCart) {
+          setCartItems(JSON.parse(storedCart));
+        }
+      } catch (parseErr) {}
+
+      const tasks: Promise<any>[] = [loadProducts(), loadCategories()];
       if (isAdmin && api.getAuthToken()) tasks.push(loadOrders());
-      await Promise.all(tasks);
+      
+      const [loadedProducts] = await Promise.all(tasks);
+      
       // Load cart from localStorage (user-specific, not synced to DB)
       try {
         const storedCart = localStorage.getItem('sam_buyer_cart');
-        if (storedCart) setCartItems(JSON.parse(storedCart));
+        if (storedCart) {
+          const parsedCart: CartItem[] = JSON.parse(storedCart);
+          // Sync with latest products to avoid stale prices or deleted items
+          let hasChanges = false;
+          const syncedCart = parsedCart.map(item => {
+            const upToDateProduct = (loadedProducts as Product[]).find(p => p.id === item.product.id);
+            if (!upToDateProduct) {
+              hasChanges = true;
+              return null;
+            }
+            if (upToDateProduct.price !== item.product.price || upToDateProduct.name !== item.product.name || upToDateProduct.stock !== item.product.stock) {
+              hasChanges = true;
+            }
+            return { ...item, product: upToDateProduct };
+          }).filter(Boolean) as CartItem[];
+          
+          setCartItems(syncedCart);
+          if (hasChanges) {
+             localStorage.setItem('sam_buyer_cart', JSON.stringify(syncedCart));
+             // Don't trigger toast here to avoid annoying user on load, but data is safe.
+          }
+        }
       } catch (parseErr) { console.error('Cart parse error:', parseErr); }
-      setLoading(false);
+      setIsFetchingData(false);
     }
     init();
   }, [loadProducts, loadOrders, loadCategories]);
@@ -307,14 +342,9 @@ export default function App() {
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(searchText.toLowerCase()) ||
                           p.description.toLowerCase().includes(searchText.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+    const matchesCategory = p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const categoryCount = (catId: string) => {
-    if (catId === 'all') return products.length;
-    return products.filter((p) => p.category === catId).length;
-  };
 
   const cartTotalQty = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotalPrice = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
@@ -323,18 +353,7 @@ export default function App() {
     <span style={{ fontSize: 15, lineHeight: 1 }}>{icon}</span>
   );
 
-  if (loading) {
-    return (
-      <MobileFrame isAdminMode={false} onExitAdmin={() => {}}>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">加载中...</p>
-          </div>
-        </div>
-      </MobileFrame>
-    );
-  }
+
 
   return (
     <MobileFrame isAdminMode={isAdminMode} onExitAdmin={() => { window.location.hash = '#/'; }} onAuthSuccess={() => { setAdminAuthVersion(v => v + 1); loadOrders(); }}>
@@ -349,7 +368,7 @@ export default function App() {
           onDataChange={async () => { await Promise.all([loadProducts(), loadOrders(), loadCategories()]); }}
         />
       ) : (
-        <div className="flex-1 flex flex-col relative h-full">
+        <div className="flex-1 overflow-y-auto no-scrollbar relative h-full">
           {/* Premium Branded Header Billboard Section */}
           <div className="bg-gradient-to-br from-[#0c4088] to-[#041c40] text-white p-5 text-left select-none shadow-md relative overflow-hidden shrink-0">
             <div className="absolute -right-12 -top-12 w-32 h-32 rounded-full bg-sky-500/10 blur-2xl pointer-events-none" />
@@ -424,90 +443,69 @@ export default function App() {
                 className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
               />
             </div>
-            {/* Category Pills */}
-            <div className="mt-2">
-              {expandCategories ? (
-                <div className="space-y-1">
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[ALL_CATEGORY, ...categories].map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => { setSelectedCategory(cat.id); setExpandCategories(false); }}
-                        className={`flex items-center justify-center gap-1 px-2 py-2 rounded-xl text-xs font-semibold transition-all ${
-                          selectedCategory === cat.id
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {renderCategoryIcon(cat.icon)}
-                        <span>{cat.name}</span>
-                        <span className={`text-[10px] ${selectedCategory === cat.id ? 'text-blue-200' : 'text-gray-400'}`}>
-                          ({categoryCount(cat.id)})
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setExpandCategories(false)}
-                    className="w-full text-[10px] text-gray-400 py-1 flex items-center justify-center gap-1 hover:text-gray-600"
-                  >
-                    <ChevronDown size={12} className="rotate-180" />
-                    <span>收起分类</span>
-                  </button>
+          </div>
+
+          <div className="flex items-start flex-1 bg-white min-h-0">
+            {/* Left Sidebar Categories */}
+            <div className="w-[84px] shrink-0 bg-slate-50 border-r border-slate-100 sticky top-[56px] overflow-y-auto no-scrollbar z-10 h-[calc(100dvh-56px)] md:h-[764px]">
+               <div className={`pt-2 ${cartTotalQty > 0 ? 'pb-28' : 'pb-6'}`}>
+                 {categories.map((cat) => (
+                   <button
+                     key={cat.id}
+                     onClick={() => setSelectedCategory(cat.id)}
+                     className={`w-full flex flex-col items-center justify-center gap-1.5 py-4 px-1 transition-all relative ${
+                       selectedCategory === cat.id
+                         ? 'bg-white font-extrabold text-blue-600'
+                         : 'text-slate-500 hover:bg-slate-200/50 font-medium'
+                     }`}
+                   >
+                     {selectedCategory === cat.id && (
+                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-500 rounded-r-full shadow-[1px_0_4px_rgba(59,130,246,0.4)]" />
+                     )}
+                     <span className="text-[20px] leading-none drop-shadow-sm">{cat.icon}</span>
+                     <span className="text-[11px] leading-tight text-center mt-1">{cat.name}</span>
+                   </button>
+                 ))}
+               </div>
+            </div>
+
+            {/* Right Product Grid */}
+            <div className={`flex-1 px-3 py-3 w-full overflow-hidden ${cartTotalQty > 0 ? ' pb-28' : ''}`}>
+              {isFetchingData ? (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {[1, 2, 3, 4, 5, 6].map(i => (
+                    <div key={i} className="bg-slate-100 rounded-2xl h-56 animate-pulse border border-slate-50 flex flex-col">
+                      <div className="h-32 bg-slate-200/60 rounded-t-2xl w-full" />
+                      <div className="p-2 flex flex-col gap-2 flex-1">
+                        <div className="h-4 bg-slate-200/60 rounded w-3/4" />
+                        <div className="h-3 bg-slate-200/60 rounded w-1/2" />
+                        <div className="mt-auto flex justify-between items-center">
+                          <div className="h-5 bg-slate-200/60 rounded w-1/3" />
+                          <div className="h-6 w-6 bg-slate-200/60 rounded-full" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                  <AlertCircle size={40} className="mb-3 text-slate-300" />
+                  <p className="text-sm font-medium">暂无商品</p>
                 </div>
               ) : (
-                <div className="flex gap-1.5 items-center">
-                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1">
-                    {[ALL_CATEGORY, ...categories].map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
-                          selectedCategory === cat.id
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {renderCategoryIcon(cat.icon)}
-                        <span>{cat.name}</span>
-                        <span className={`text-[10px] ${selectedCategory === cat.id ? 'text-blue-200' : 'text-gray-400'}`}>
-                          ({categoryCount(cat.id)})
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setExpandCategories(true)}
-                    className="shrink-0 w-7 h-7 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 flex items-center justify-center transition-colors"
-                    title="展开全部分类"
-                  >
-                    <ChevronDown size={14} />
-                  </button>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {filteredProducts.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onSelect={setSelectedProduct}
+                      onAddToCart={handleAddToCart}
+                      cartQuantity={cartItems.find(c => c.product.id === product.id)?.quantity || 0}
+                    />
+                  ))}
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Product Grid */}
-          <div className={`flex-1 overflow-y-auto no-scrollbar px-3 py-3${cartTotalQty > 0 ? ' pb-28' : ''}`}>
-            {filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                <AlertCircle size={40} className="mb-3" />
-                <p className="text-sm">暂无商品</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2.5">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onSelect={setSelectedProduct}
-                    onAddToCart={handleAddToCart}
-                    cartQuantity={cartItems.find(c => c.product.id === product.id)?.quantity || 0}
-                  />
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Floating Cart Bar */}
@@ -601,28 +599,50 @@ export default function App() {
       {showQrModal && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowQrModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden z-10 border border-slate-100">
-            <div className="px-5 pt-5 pb-3 text-center">
-              <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto mb-3">
-                <MessageCircle size={18} />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-[340px] overflow-hidden z-10 border border-slate-100">
+            {/* Header with gradient */}
+            <div className="px-5 pt-6 pb-4 text-center bg-gradient-to-b from-slate-50 to-white">
+              <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-500/20">
+                <MessageCircle size={22} />
               </div>
-              <h3 className="font-extrabold text-slate-800 text-sm">添加客服微信</h3>
-              <p className="text-[11px] text-slate-400 mt-1">扫码添加代购小哥，确认订单及核销</p>
+              <h3 className="font-black text-slate-800 text-base tracking-wide">联系我们</h3>
+              <p className="text-xs text-slate-400 mt-1.5 px-2">截图保存此页，在微信中扫一扫识别</p>
             </div>
-            <div className="px-5 pb-2 flex justify-center">
-              <img
-                src="/qrcode.jpg"
-                alt="客服微信二维码"
-                className="w-48 h-48 rounded-xl border border-slate-100 object-cover"
-              />
+            
+            {/* Dual QR Codes */}
+            <div className="px-5 pb-5 grid grid-cols-2 gap-3">
+              <div className="flex flex-col items-center p-3 bg-slate-50 rounded-2xl border border-slate-100 transition-transform hover:-translate-y-1">
+                <div className="bg-white p-1.5 rounded-xl shadow-sm mb-2 w-full">
+                  <img
+                    src="/qrcode.jpg"
+                    alt="客服微信"
+                    className="w-full aspect-square rounded-lg object-cover"
+                  />
+                </div>
+                <span className="text-xs font-extrabold text-slate-800">客服微信</span>
+                <span className="text-[9px] text-slate-400 mt-0.5 font-medium text-center">确认订单 · 人工售后</span>
+              </div>
+              
+              <div className="flex flex-col items-center p-3 bg-sky-50 rounded-2xl border border-sky-100 transition-transform hover:-translate-y-1">
+                <div className="bg-white p-1.5 rounded-xl shadow-sm mb-2 w-full">
+                  <img
+                    src="/official_account.jpg"
+                    alt="官方公众号"
+                    className="w-full aspect-square rounded-lg object-cover"
+                  />
+                </div>
+                <span className="text-xs font-extrabold text-sky-800">官方微信公众号</span>
+                <span className="text-[9px] text-sky-500/80 mt-0.5 font-medium text-center">上架通知 · 专属福利</span>
+              </div>
             </div>
-            <div className="px-5 pb-5 pt-1">
+
+            <div className="px-5 pb-5">
               <button
                 onClick={() => setShowQrModal(false)}
-                className="w-full py-2.5 text-xs font-bold text-slate-500 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+                className="w-full py-3 text-xs font-bold text-slate-500 rounded-xl border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-colors flex items-center justify-center gap-1 active:scale-[0.98]"
               >
-                <X size={14} />
-                关闭
+                <X size={16} strokeWidth={2.5} />
+                我知道了，关闭
               </button>
             </div>
           </div>

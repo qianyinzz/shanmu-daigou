@@ -85,12 +85,41 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onSubmitOrde
   const handleCopy = () => {
     if (!activeOrder) return;
     const text = generateManifestText(activeOrder);
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
-    }).catch(() => {
-      alert('抱歉，复制失败，请手动在框中长按全选复制');
-    });
+    
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+      }).catch(() => {
+        alert('抱歉，复制失败，请手动在框中长按全选复制');
+      });
+    } else {
+      // 降级方案：用于非 HTTPS 环境（如局域网手机测试或微信环境）
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        // 将 textarea 移出视口，避免页面跳动
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 3000);
+        } else {
+          alert('抱歉，复制失败，请手动在框中长按全选复制');
+        }
+      } catch (err) {
+        console.error('Fallback copy failed', err);
+        alert('抱歉，您的浏览器不支持一键复制，请手动全选复制');
+      }
+    }
   };
 
   const handleFinishCheckoutSubmit = (e: FormEvent) => {
