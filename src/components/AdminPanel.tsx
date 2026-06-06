@@ -643,6 +643,15 @@ export default function AdminPanel({
     }
   };
 
+  const handleHotToggle = async (p: Product) => {
+    try {
+      await api.updateProduct(Number(p.id), { is_hot: !p.is_hot });
+      await onDataChange();
+    } catch (err) {
+      console.error('更新推荐爆款状态失败:', err);
+    }
+  };
+
   const filteredOrders = orderFilter === 'all' ? orders : orders.filter((o) => o.status === orderFilter);
   const statusMap: Record<string, { label: string; color: string }> = {
     pending: { label: '待处理', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -961,6 +970,17 @@ export default function AdminPanel({
                       </div>
                     </div>
 
+                    <button
+                      onClick={() => handleHotToggle(p)}
+                      className={`p-1.5 rounded-lg transition-colors shrink-1 cursor-pointer ${
+                        p.is_hot 
+                          ? 'bg-amber-100 text-amber-600 border border-amber-200 shadow-inner' 
+                          : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                      }`}
+                      title={p.is_hot ? "取消推荐爆款" : "设为推荐爆款"}
+                    >
+                      <span className="text-[14px] leading-none select-none">{p.is_hot ? '🔥' : '♨️'}</span>
+                    </button>
                     <button
                       onClick={() => startEditProduct(p)}
                       className="p-1.5 rounded-lg bg-sky-50 text-sky-500 hover:bg-sky-100 transition-colors shrink-1 cursor-pointer"
