@@ -418,10 +418,10 @@ export default function AdminPanel({
   const handleSaveSortOrder = async () => {
     setSavingSortOrder(true);
     try {
-      const originalSortOrders = displayProducts.map(p => p.sort_order).sort((a, b) => a - b);
+      const originalSortOrders = displayProducts.map(p => p.sort_order || 0).sort((a, b) => a - b);
       const items = sortedProducts.map((p, idx) => ({
         id: Number(p.id),
-        sort_order: originalSortOrders[idx] ?? idx,
+        sort_order: (typeof originalSortOrders[idx] === 'number' && !isNaN(originalSortOrders[idx])) ? originalSortOrders[idx] : idx,
       }));
       await api.reorderProducts(items);
       await onDataChange();
@@ -431,7 +431,7 @@ export default function AdminPanel({
       }, 1200);
     } catch (err) {
       console.error('保存排序失败:', err);
-      alert('保存排序失败，请重试');
+      alert('保存排序失败: ' + ((err as Error).message || err));
     } finally {
       setSavingSortOrder(false);
     }
@@ -782,6 +782,10 @@ export default function AdminPanel({
                     onClick={() => {
                       if (adminCategoryFilter === 'all') {
                         alert('请先在下方选择一个具体分类，然后再进行排序');
+                        return;
+                      }
+                      if (displayProducts.length === 0) {
+                        alert('当前分类下没有商品，无法排序');
                         return;
                       }
                       enterSortMode();
