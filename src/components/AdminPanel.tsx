@@ -366,7 +366,12 @@ export default function AdminPanel({
   const [adminCategoryFilter, setAdminCategoryFilter] = useState<string>('all');
   const displayProducts = useMemo(() => {
     if (adminCategoryFilter === 'all') return products;
-    return products.filter(p => p.category === adminCategoryFilter);
+    return products.filter(p => {
+      if (adminCategoryFilter === 'hot') {
+        return p.category === 'hot' || p.is_hot;
+      }
+      return p.category === adminCategoryFilter;
+    });
   }, [products, adminCategoryFilter]);
 
   // Product sort mode state
