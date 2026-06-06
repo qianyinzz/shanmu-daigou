@@ -13,6 +13,7 @@ interface ProductDetailProps {
   onClose: () => void;
   onAddToCart: (product: Product) => void;
   onRemoveFromCart: (product: Product) => void;
+  cartQuantity: number;
 }
 
 export default function ProductDetail({

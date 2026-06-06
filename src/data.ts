@@ -30,6 +30,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '山姆镇店之宝！热气腾腾、皮脆肉嫩、汁水充盈。精选优质整鸡，配成经典奥尔良美味，趁热吃超级过瘾。',
     stock: 12,
     limit: 2,
+    sort_order: 0,
     badge: '人气爆款'
   },
   {
@@ -42,6 +43,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '风靡全网的代购必入！精选进口鲜奶油与松软蛋糕坯，口感丝滑细腻，甜而不腻，下午茶及早餐不二之选。',
     stock: 8,
     limit: 1,
+    sort_order: 0,
     badge: '限时特产'
   },
   {
@@ -53,6 +55,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '超人气熟食！香浓马苏里拉干酪包裹滑嫩牛肉片与浓郁番茄肉酱，酥脆饼皮微波或空气炸锅加热5分钟即享拉丝拉手。',
     stock: 15,
     limit: 3,
+    sort_order: 0,
     badge: '常青爆款'
   },
   {
@@ -65,6 +68,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '真材实料！铺设厚实饱满的苏丹王或金枕头榴莲果肉，层层薄如蝉翼的班杰饼配以轻盈动物鲜奶油，入口即化，榴莲控狂喜。',
     stock: 5,
     limit: 1,
+    sort_order: 0,
     badge: '榴莲狂欢'
   },
   {
@@ -76,6 +80,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '清爽解腻神器！精选菲律宾进口新鲜小青柠，NFC非浓缩还原压榨，100%纯果汁黄金比例，酸甜解渴，冰镇后风味更佳。',
     stock: 22,
     limit: 4,
+    sort_order: 0,
     badge: '解腻神器'
   },
   {
@@ -87,6 +92,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: 'Q弹有嚼劲！表皮撒有香脆黑芝麻，软韧麻薯内里带有淡淡麦芽微甜，分量扎实，是全家老少皆宜的营养小糕点。',
     stock: 18,
     limit: 2,
+    sort_order: 0,
     badge: '口碑常客'
   },
   {
@@ -99,6 +105,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '进口品质！草饲安格斯，雪花红肉比例极佳，肉质紧实多汁，自带天然牛油香气，适合香煎、炙烤，居家享受星级牛排。',
     stock: 6,
     limit: 2,
+    sort_order: 0,
     badge: '生鲜尖货'
   },
   {
@@ -110,6 +117,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: '颗颗精选！人工早晨采摘直达，果实饱满红润，香甜浓郁多汁，硬度适中。不催熟不催大，给您最纯粹的自然芬芳。',
     stock: 10,
     limit: 2,
+    sort_order: 0,
     badge: '产地直供'
   }
 ];
