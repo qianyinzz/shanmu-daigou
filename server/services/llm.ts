@@ -45,7 +45,7 @@ export async function categorizeProductWithLLM(name: string, description: string
   const prompt = `Product Name: ${name}\nDescription: ${description || 'No description'}\n\nCategory ID:`;
   
   const response = await client.chat.completions.create({
-    model: 'gpt-4o', // Or claude-3-5-sonnet-latest, gemini-2.0-flash
+    model: 'gemini-3-flash-preview',
     messages: [
       { role: 'system', content: CATEGORY_PROMPT },
       { role: 'user', content: prompt }
