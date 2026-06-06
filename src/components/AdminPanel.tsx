@@ -373,6 +373,7 @@ export default function AdminPanel({
   const [sortedProducts, setSortedProducts] = useState<Product[]>([]);
   const [savingSortOrder, setSavingSortOrder] = useState(false);
   const [sortSaveSuccess, setSortSaveSuccess] = useState(false);
+  const [isCategorizing, setIsCategorizing] = useState(false);
 
   // Enter sort mode: copy current products for reordering
   const enterSortMode = () => {
@@ -434,6 +435,22 @@ export default function AdminPanel({
       alert('保存排序失败: ' + ((err as Error).message || err));
     } finally {
       setSavingSortOrder(false);
+    }
+  };
+
+  const handleAutoCategorize = async () => {
+    if (!window.confirm('是否使用 AI 对当前显示的所有商品进行一键智能分类？\n注意：分类结果可能会被直接覆盖保存。')) return;
+    setIsCategorizing(true);
+    try {
+      const productIds = displayProducts.map(p => Number(p.id));
+      const res = await api.autoCategorizeProducts(productIds);
+      await onDataChange();
+      alert(`智能分类完成！成功更新了 ${res.updated} 个商品。`);
+    } catch (err) {
+      console.error('智能分类失败:', err);
+      alert('智能分类失败: ' + ((err as Error).message || err));
+    } finally {
+      setIsCategorizing(false);
     }
   };
 
@@ -799,6 +816,14 @@ export default function AdminPanel({
                   >
                     <GripVertical size={12} />
                     <span>分类排序</span>
+                  </button>
+                  <button
+                    onClick={handleAutoCategorize}
+                    disabled={isCategorizing || displayProducts.length === 0}
+                    className="text-[10px] font-bold flex items-center gap-1 border border-blue-300 text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 cursor-pointer"
+                    title="使用大模型对当前商品智能分类"
+                  >
+                    <span>{isCategorizing ? '分类中...' : '🤖 智能分类'}</span>
                   </button>
                 ) : (
                   <>

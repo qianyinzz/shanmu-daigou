@@ -207,6 +207,13 @@ export async function seedProducts(products: Array<{ name: string; category: str
   });
 }
 
+export async function autoCategorizeProducts(productIds?: number[]): Promise<{ updated: number; results: any[] }> {
+  return request<{ updated: number; results: any[] }>('/api/products/auto-categorize', {
+    method: 'POST',
+    body: JSON.stringify({ productIds }),
+  });
+}
+
 // ========== 订单 API ==========
 export async function fetchOrders(filters?: { status?: string; location?: string; page?: number; pageSize?: number }): Promise<OrderRow[]> {
   const params = new URLSearchParams();

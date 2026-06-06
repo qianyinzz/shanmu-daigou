@@ -4,6 +4,7 @@ import { getSupabaseClient } from '../src/storage/database/supabase-client';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { verifyPassword, generateToken, changePassword, authMiddleware } from '../middleware/auth';
+import { categorizeProductWithLLM } from '../services/llm';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -452,6 +453,54 @@ router.post('/api/products/seed', authMiddleware, async (req: Request, res: Resp
   }
 });
 
+
+// // 批量自动分类商品 (调用 LLM)
+router.post('/api/products/auto-categorize', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { productIds } = req.body;
+    const client = getSupabaseClient();
+    
+    let query = client.from('products').select('id, name, description');
+    if (Array.isArray(productIds) && productIds.length > 0) {
+      query = query.in('id', productIds);
+    }
+    
+    const { data: products, error: fetchErr } = await query;
+    if (fetchErr) throw new Error(`查询商品失败: ${fetchErr.message}`);
+    if (!products || products.length === 0) {
+      res.json({ success: true, data: { updated: 0 } });
+      return;
+    }
+
+    let updatedCount = 0;
+    const results = [];
+    
+    // Process sequentially or in small batches to respect rate limits
+    for (const p of products) {
+      try {
+        const newCategory = await categorizeProductWithLLM(p.name, p.description || '');
+        const { error: updateErr } = await client
+          .from('products')
+          .update({ category: newCategory, updated_at: new Date().toISOString() })
+          .eq('id', p.id);
+          
+        if (updateErr) {
+          results.push({ id: p.id, success: false, error: updateErr.message });
+        } else {
+          updatedCount++;
+          results.push({ id: p.id, success: true, category: newCategory });
+        }
+      } catch (e) {
+        results.push({ id: p.id, success: false, error: (e as Error).message });
+      }
+    }
+    
+    res.json({ success: true, data: { updated: updatedCount, results } });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: message });
+  }
+});
 
 // ==================== 订单 API ====================
 
