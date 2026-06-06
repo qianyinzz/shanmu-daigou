@@ -361,6 +361,13 @@ export default function AdminPanel({
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Admin Product Category Filter
+  const [adminCategoryFilter, setAdminCategoryFilter] = useState<string>('all');
+  const displayProducts = useMemo(() => {
+    if (adminCategoryFilter === 'all') return products;
+    return products.filter(p => p.category === adminCategoryFilter);
+  }, [products, adminCategoryFilter]);
+
   // Product sort mode state
   const [sortMode, setSortMode] = useState(false);
   const [sortedProducts, setSortedProducts] = useState<Product[]>([]);
@@ -369,7 +376,7 @@ export default function AdminPanel({
 
   // Enter sort mode: copy current products for reordering
   const enterSortMode = () => {
-    setSortedProducts([...products]);
+    setSortedProducts([...displayProducts]);
     setSortMode(true);
     setSortSaveSuccess(false);
   };
@@ -411,9 +418,10 @@ export default function AdminPanel({
   const handleSaveSortOrder = async () => {
     setSavingSortOrder(true);
     try {
+      const originalSortOrders = displayProducts.map(p => p.sort_order).sort((a, b) => a - b);
       const items = sortedProducts.map((p, idx) => ({
         id: Number(p.id),
-        sort_order: idx,
+        sort_order: originalSortOrders[idx] ?? idx,
       }));
       await api.reorderProducts(items);
       await onDataChange();
@@ -771,11 +779,22 @@ export default function AdminPanel({
               <div className="flex items-center gap-1.5">
                 {!sortMode ? (
                   <button
-                    onClick={enterSortMode}
-                    className="text-[10px] font-bold text-violet-600 flex items-center gap-1 border border-violet-300 px-2 py-1 rounded-lg hover:bg-violet-50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (adminCategoryFilter === 'all') {
+                        alert('请先在下方选择一个具体分类，然后再进行排序');
+                        return;
+                      }
+                      enterSortMode();
+                    }}
+                    className={`text-[10px] font-bold flex items-center gap-1 border px-2 py-1 rounded-lg transition-colors ${
+                      adminCategoryFilter === 'all'
+                        ? 'text-slate-400 border-slate-200 bg-slate-50 cursor-not-allowed'
+                        : 'text-violet-600 border-violet-300 hover:bg-violet-50 cursor-pointer'
+                    }`}
+                    title={adminCategoryFilter === 'all' ? '请先选择一个分类' : '对当前分类进行排序'}
                   >
                     <GripVertical size={12} />
-                    <span>排序</span>
+                    <span>分类排序</span>
                   </button>
                 ) : (
                   <>
@@ -805,9 +824,34 @@ export default function AdminPanel({
               </div>
             )}
 
-            {products.length === 0 ? (
+            {!sortMode && (
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 mb-2">
+                <button
+                  onClick={() => setAdminCategoryFilter('all')}
+                  className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-bold transition-colors ${
+                    adminCategoryFilter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border border-slate-200'
+                  }`}
+                >
+                  全部商品
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setAdminCategoryFilter(cat.id)}
+                    className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-bold transition-colors flex items-center gap-1 ${
+                      adminCategoryFilter === cat.id ? 'bg-sky-500 text-white border-sky-500' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-[12px] leading-none">{cat.icon}</span>
+                    <span>{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {displayProducts.length === 0 ? (
               <div className="bg-white rounded-xl p-8 border border-slate-200 text-center text-slate-400">
-                <p className="text-xs font-semibold">暂无在售商品，点击上方"添品"自主上架！</p>
+                <p className="text-xs font-semibold">{products.length === 0 ? '暂无在售商品，点击上方"添品"自主上架！' : '该分类下暂无商品'}</p>
               </div>
             ) : sortMode ? (
               /* === Drag-and-Drop Sort Mode UI === */
@@ -822,7 +866,7 @@ export default function AdminPanel({
               </DndContext>
             ) : (
               <div className="space-y-2.5">
-                {products.map((p) => (
+                {displayProducts.map((p) => (
                   <div
                     key={p.id}
                     className="bg-white rounded-xl p-3 border border-slate-200 shadow-xs flex items-center gap-3"
