@@ -484,6 +484,7 @@ export default function AdminPanel({
     setDescription(p.description || '');
     setBadge(p.badge || '');
     setLimit(String(p.limit || 0));
+    setIsHot(Boolean(p.is_hot));
     setFormError('');
     setFormSuccess(false);
     setActiveTab('add');
