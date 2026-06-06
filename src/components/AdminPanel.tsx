@@ -643,6 +643,15 @@ export default function AdminPanel({
     }
   };
 
+  const handleCategoryUpdate = async (p: Product, newCategoryId: string) => {
+    try {
+      await api.updateProduct(Number(p.id), { category: newCategoryId });
+      await onDataChange();
+    } catch (err) {
+      console.error('更新分类失败:', err);
+    }
+  };
+
   const handleHotToggle = async (p: Product) => {
     try {
       await api.updateProduct(Number(p.id), { is_hot: !p.is_hot });
@@ -934,10 +943,15 @@ export default function AdminPanel({
 
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded shrink-0">
-                          {categories.find((cat) => cat.id === p.category)?.icon}{' '}
-                          {categories.find((cat) => cat.id === p.category)?.name || '其它'}
-                        </span>
+                        <select
+                          value={p.category}
+                          onChange={(e) => handleCategoryUpdate(p, e.target.value)}
+                          className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-1 py-0.5 rounded shrink-0 border-none outline-none focus:ring-0 cursor-pointer max-w-[80px] truncate"
+                        >
+                          {categories.map(c => (
+                            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                          ))}
+                        </select>
                         <h4 className="font-extrabold text-slate-800 text-xs truncate">{p.name}</h4>
                       </div>
 

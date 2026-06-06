@@ -16,7 +16,7 @@ interface MobileFrameProps {
 }
 
 export default function MobileFrame({ children, isAdminMode, onExitAdmin, onAuthSuccess }: MobileFrameProps) {
-  const isMobileMode = true;
+  const isMobileMode = !isAdminMode;
 
   // Admin password gate state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
