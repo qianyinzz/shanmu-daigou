@@ -15,7 +15,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onSelect, onAddToCart, cartQuantity }: ProductCardProps) {
-  const isOutOfStock = product.stock <= 0;
+
   const isLimitReached = product.limit > 0 && cartQuantity >= product.limit;
   
   // Choose custom icon for badges
@@ -30,9 +30,7 @@ export default function ProductCard({ product, onSelect, onAddToCart, cartQuanti
     <div
       onClick={() => onSelect(product)}
       id={`product-card-${product.id}`}
-      className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col cursor-pointer border border-slate-100 ${
-        isOutOfStock ? 'opacity-65' : ''
-      }`}
+      className={`group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col cursor-pointer border border-slate-100`}
     >
       {/* Product Image & Badges */}
       <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
@@ -62,21 +60,7 @@ export default function ProductCard({ product, onSelect, onAddToCart, cartQuanti
           </span>
         )}
 
-        {/* Stock Status Badge */}
-        {product.stock > 0 && product.stock <= 5 && (
-          <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-red-500 text-white text-[9px] font-semibold tracking-wide animate-pulse shadow-sm">
-            🔥 仅剩 {product.stock} 件
-          </div>
-        )}
 
-        {/* Sold Out Overlay */}
-        {isOutOfStock && (
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-10">
-            <span className="px-3 py-1.5 rounded-full bg-slate-900/80 text-white font-bold text-xs uppercase tracking-widest border border-slate-600 shadow-md">
-              已售罄 (Sold Out)
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Info details */}
@@ -115,15 +99,13 @@ export default function ProductCard({ product, onSelect, onAddToCart, cartQuanti
           <button
             onClick={(e) => {
               e.stopPropagation(); // Avoid popping details drawer
-              if (!isOutOfStock && !isLimitReached) {
+              if (!isLimitReached) {
                 onAddToCart(product);
               }
             }}
-            disabled={isOutOfStock || isLimitReached}
+            disabled={isLimitReached}
             className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-              isOutOfStock
-                ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                : isLimitReached
+              isLimitReached
                 ? 'bg-indigo-50 text-indigo-400 border border-indigo-100 cursor-not-allowed text-[10px] font-semibold'
                 : 'bg-sky-500 text-white hover:bg-sky-600 shadow-md active:scale-95'
             }`}

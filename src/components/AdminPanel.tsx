@@ -526,11 +526,7 @@ export default function AdminPanel({
       return;
     }
 
-    const numericalStock = parseInt(stock);
-    if (isNaN(numericalStock) || numericalStock < 0) {
-      setFormError('请输入合法的库存数字');
-      return;
-    }
+    const numericalStock = 99999;
 
     const numericalLimit = parseInt(limit);
     if (isNaN(numericalLimit) || numericalLimit < 0) {
@@ -619,14 +615,14 @@ export default function AdminPanel({
     }
   };
 
-  const handleStockUpdate = async (p: Product, newStockValStr: string) => {
-    const val = parseInt(newStockValStr);
+  const handleLimitUpdate = async (p: Product, newLimitStr: string) => {
+    const val = parseInt(newLimitStr);
     if (!isNaN(val) && val >= 0) {
       try {
-        await api.updateProduct(Number(p.id), { stock: val });
+        await api.updateProduct(Number(p.id), { purchase_limit: val });
         await onDataChange();
       } catch (err) {
-        console.error('更新库存失败:', err);
+        console.error('更新限购失败:', err);
       }
     }
   };
@@ -821,7 +817,7 @@ export default function AdminPanel({
         {activeTab === 'products' && (
           <div className="space-y-3 pb-8">
             <h3 className="font-bold text-slate-700 text-xs uppercase tracking-wider mb-2 border-l-4 border-sky-500 pl-2 flex items-center justify-between">
-              <span>{sortMode ? '拖拽排序模式 — 调整后点“保存排序”' : '实时商品库存与价格调整 (修改立即生效)'}</span>
+              <span>{sortMode ? '拖拽排序模式 — 调整后点“保存排序”' : '实时商品价格与限购调整 (修改立即生效)'}</span>
               <div className="flex items-center gap-1.5">
                 {!sortMode ? (
                   <>
@@ -969,16 +965,13 @@ export default function AdminPanel({
                         </div>
 
                         <div className="flex items-center gap-1 justify-end">
-                          <span className="text-[10px] text-slate-400 font-bold">库存:</span>
+                          <span className="text-[10px] text-slate-400 font-bold">限购:</span>
                           <input
                             type="number"
-                            value={p.stock}
-                            onChange={(e) => handleStockUpdate(p, e.target.value)}
-                            className={`w-12 border rounded px-1 py-0.5 text-[11px] font-mono font-bold text-center focus:outline-none ${
-                              p.stock <= 0
-                                ? 'bg-red-50 text-red-600 border-red-200'
-                                : 'bg-slate-50 text-slate-800 border-slate-200 focus:bg-white'
-                            }`}
+                            value={p.limit}
+                            onChange={(e) => handleLimitUpdate(p, e.target.value)}
+                            className="w-12 border border-slate-200 bg-slate-50 text-slate-800 focus:bg-white rounded px-1 py-0.5 text-[11px] font-mono font-bold text-center focus:outline-none"
+                            title="0为不限购"
                           />
                         </div>
                       </div>
@@ -1595,18 +1588,7 @@ export default function AdminPanel({
                   />
                 </div>
 
-                {/* Stocks */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">库存数量</label>
-                  <input
-                    type="number"
-                    value={stock}
-                    onChange={(e) => setStock(e.target.value)}
-                    placeholder="20"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-none"
-                    required
-                  />
-                </div>
+
 
                 {/* Purchase Limits */}
                 <div className="space-y-1">

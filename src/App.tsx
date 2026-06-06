@@ -201,48 +201,19 @@ export default function App() {
   };
 
   const handleAddToCart = async (product: Product) => {
-    // 实时查询单个商品库存，避免全量拉取
-    try {
-      const fresh = await api.fetchProductStock(Number(product.id));
-      if (fresh.stock <= 0) {
-        triggerToast('⚠️ 抱歉，该商品库存不足');
+    const existingIndex = cartItems.findIndex((item) => item.product.id === product.id);
+    if (existingIndex > -1) {
+      if (product.limit > 0 && cartItems[existingIndex].quantity >= product.limit) {
+        triggerToast(`⚠️ 该商品每人限购 ${product.limit} 件`);
         return;
       }
-      const currentStock = fresh.stock;
-      const existingIndex = cartItems.findIndex((item) => item.product.id === product.id);
-      if (existingIndex > -1) {
-        if (cartItems[existingIndex].quantity >= currentStock) {
-          triggerToast('⚠️ 购物车数量已达当前库存上限');
-          return;
-        }
-        const updatedCart = [...cartItems];
-        updatedCart[existingIndex] = { ...updatedCart[existingIndex], quantity: updatedCart[existingIndex].quantity + 1, product: { ...product, stock: currentStock } };
-        saveCartToLocal(updatedCart);
-      } else {
-        saveCartToLocal([...cartItems, { product: { ...product, stock: currentStock }, quantity: 1 }]);
-      }
-      triggerToast(`🛒 "${product.name}" 已加购`);
-    } catch (stockErr) {
-      console.error('Stock check failed, using cached stock:', stockErr);
-      // 降级：使用本地缓存的库存
-      if (product.stock <= 0) {
-        triggerToast('⚠️ 抱歉，该商品库存不足');
-        return;
-      }
-      const existingIndex = cartItems.findIndex((item) => item.product.id === product.id);
-      if (existingIndex > -1) {
-        if (cartItems[existingIndex].quantity >= product.stock) {
-          triggerToast('⚠️ 购物车数量已达当前库存上限');
-          return;
-        }
-        const updatedCart = [...cartItems];
-        updatedCart[existingIndex].quantity += 1;
-        saveCartToLocal(updatedCart);
-      } else {
-        saveCartToLocal([...cartItems, { product, quantity: 1 }]);
-      }
-      triggerToast(`🛒 "${product.name}" 已加购`);
+      const updatedCart = [...cartItems];
+      updatedCart[existingIndex].quantity += 1;
+      saveCartToLocal(updatedCart);
+    } else {
+      saveCartToLocal([...cartItems, { product, quantity: 1 }]);
     }
+    triggerToast(`🛒 "${product.name}" 已加购`);
   };
 
   const handleRemoveFromCart = (product: Product) => {
@@ -266,8 +237,8 @@ export default function App() {
     } else {
       const targetItem = cartItems.find((item) => item.product.id === productId);
       if (!targetItem) return;
-      if (quantity > targetItem.product.stock) {
-        triggerToast(`⚠️ 数量最多为 ${targetItem.product.stock} 件 (受库存限制)`);
+      if (targetItem.product.limit > 0 && quantity > targetItem.product.limit) {
+        triggerToast(`⚠️ 该商品每人限购 ${targetItem.product.limit} 件`);
         return;
       }
       updatedCart = cartItems.map((item) =>

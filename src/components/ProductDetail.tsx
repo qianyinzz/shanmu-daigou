@@ -25,7 +25,7 @@ export default function ProductDetail({
 }: ProductDetailProps) {
   if (!product) return null;
 
-  const isOutOfStock = product.stock <= 0;
+
   const isLimitReached = product.limit > 0 && cartQuantity >= product.limit;
   const salesVolume = getSalesVolume(product.id);
 
@@ -120,13 +120,6 @@ export default function ProductDetail({
 
               {/* Purchase Rules Alert Board */}
               <div className="mt-4 space-y-2">
-                <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-2.5 rounded-lg border border-slate-100">
-                  <Package size={14} className="text-slate-400" />
-                  <span className="font-semibold text-slate-700">实时库存：</span>
-                  <span className={`font-bold ${product.stock > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {product.stock > 0 ? `限时仓储 仅剩 ${product.stock} 件` : '商品已售罄，正在紧急采购补货中'}
-                  </span>
-                </div>
 
                 {product.limit > 0 && (
                   <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-2.5 rounded-lg border border-amber-100/80">
@@ -184,13 +177,13 @@ export default function ProductDetail({
                   </span>
                   <button
                     onClick={() => {
-                      if (!isLimitReached && cartQuantity < product.stock) {
+                      if (!isLimitReached) {
                         onAddToCart(product);
                       }
                     }}
-                    disabled={isLimitReached || cartQuantity >= product.stock}
+                    disabled={isLimitReached}
                     className={`w-7 h-7 rounded-full flex items-center justify-center font-bold active:scale-95 transition-transform ${
-                      isLimitReached || cartQuantity >= product.stock
+                      isLimitReached
                         ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
                         : 'bg-sky-500 text-white hover:bg-sky-600 shadow-sm'
                     }`}
@@ -202,19 +195,12 @@ export default function ProductDetail({
                 // Primary action trigger
                 <button
                   onClick={() => {
-                    if (!isOutOfStock) {
-                      onAddToCart(product);
-                    }
+                    onAddToCart(product);
                   }}
-                  disabled={isOutOfStock}
-                  className={`px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-md transition-all active:scale-95 ${
-                    isOutOfStock
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                      : 'bg-sky-500 hover:bg-sky-600 text-white hover:shadow-lg'
-                  }`}
+                  className="px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-md transition-all active:scale-95 bg-sky-500 hover:bg-sky-600 text-white hover:shadow-lg"
                 >
                   <ShoppingCart size={13} strokeWidth={2.5} />
-                  <span>{isOutOfStock ? '今日已抢光' : '加入代购车'}</span>
+                  <span>加入代购车</span>
                 </button>
               )}
             </div>
