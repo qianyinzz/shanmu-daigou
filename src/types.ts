@@ -15,6 +15,7 @@ export interface Product {
   limit: number; // Purchase limit per person, 0 means no limit
   badge?: string; // e.g. "人气爆款", "新品首发", "限时打折"
   sort_order: number;
+  is_hot: boolean;
 }
 
 export interface CartItem {

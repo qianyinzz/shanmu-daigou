@@ -31,6 +31,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 12,
     limit: 2,
     sort_order: 0,
+    is_hot: false,
     badge: '人气爆款'
   },
   {
@@ -44,6 +45,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 8,
     limit: 1,
     sort_order: 0,
+    is_hot: false,
     badge: '限时特产'
   },
   {
@@ -56,6 +58,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 15,
     limit: 3,
     sort_order: 0,
+    is_hot: false,
     badge: '常青爆款'
   },
   {
@@ -69,6 +72,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 5,
     limit: 1,
     sort_order: 0,
+    is_hot: false,
     badge: '榴莲狂欢'
   },
   {
@@ -81,6 +85,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 22,
     limit: 4,
     sort_order: 0,
+    is_hot: false,
     badge: '解腻神器'
   },
   {
@@ -93,6 +98,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 18,
     limit: 2,
     sort_order: 0,
+    is_hot: false,
     badge: '口碑常客'
   },
   {
@@ -106,6 +112,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 6,
     limit: 2,
     sort_order: 0,
+    is_hot: false,
     badge: '生鲜尖货'
   },
   {
@@ -118,6 +125,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 10,
     limit: 2,
     sort_order: 0,
+    is_hot: false,
     badge: '产地直供'
   }
 ];

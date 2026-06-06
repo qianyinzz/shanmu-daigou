@@ -27,6 +27,7 @@ export interface ProductRow {
   stock: number;
   sort_order: number;
   purchase_limit: number;
+  is_hot: boolean;
   image_key: string | null;
   image_url: string | null;
   description: string | null;
@@ -200,7 +201,7 @@ export async function reorderProducts(items: Array<{ id: number; sort_order: num
   });
 }
 
-export async function seedProducts(products: Array<{ name: string; category: string; price: number; unit: string; stock: number; description?: string }>): Promise<{ count: number }> {
+export async function seedProducts(products: Array<{ name: string; category: string; price: number; unit: string; stock: number; is_hot: boolean; description?: string }>): Promise<{ count: number }> {
   return request<{ count: number }>('/api/products/seed', {
     method: 'POST',
     body: JSON.stringify({ products }),

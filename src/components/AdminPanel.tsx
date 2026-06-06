@@ -347,6 +347,7 @@ export default function AdminPanel({
   const [originalPrice, setOriginalPrice] = useState('');
   const [stock, setStock] = useState('20');
   const [limit, setLimit] = useState('2');
+  const [isHot, setIsHot] = useState(false);
   const [imageKey, setImageKey] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -491,6 +492,7 @@ export default function AdminPanel({
     setOriginalPrice('');
     setStock('20');
     setLimit('2');
+    setIsHot(false);
     setImageKey('');
     setImageFile(null);
     setImagePreview('');
@@ -561,6 +563,7 @@ export default function AdminPanel({
           unit: '份',
           stock: numericalStock,
           purchase_limit: numericalLimit,
+          is_hot: isHot,
           description: description.trim() || '山姆精选代购商品。由于商品抢购火爆，请在下单后向代购确认具体交货时效。',
         };
         if (finalImageKey) {
@@ -576,6 +579,7 @@ export default function AdminPanel({
           unit: '份',
           stock: numericalStock,
           purchase_limit: numericalLimit,
+          is_hot: isHot,
           image_key: finalImageKey || null,
           description: description.trim() || '山姆精选代购商品。由于商品抢购火爆，请在下单后向代购确认具体交货时效。',
         });
@@ -590,6 +594,7 @@ export default function AdminPanel({
       setOriginalPrice('');
       setStock('20');
       setLimit('2');
+      setIsHot(false);
       setImageKey('');
       setImageFile(null);
       setImagePreview('');
@@ -795,6 +800,7 @@ export default function AdminPanel({
               <span>{sortMode ? '拖拽排序模式 — 调整后点“保存排序”' : '实时商品库存与价格调整 (修改立即生效)'}</span>
               <div className="flex items-center gap-1.5">
                 {!sortMode ? (
+                  <>
                   <button
                     onClick={() => {
                       if (adminCategoryFilter === 'all') {
@@ -825,6 +831,7 @@ export default function AdminPanel({
                   >
                     <span>{isCategorizing ? '分类中...' : '🤖 智能分类'}</span>
                   </button>
+                  </>
                 ) : (
                   <>
                     <button
@@ -1495,8 +1502,20 @@ export default function AdminPanel({
                     )}
                   </div>
                 </div>
-
                 {/* Popularity Badge text */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">推荐爆款设定</label>
+                  <label className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2 cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={isHot}
+                      onChange={(e) => setIsHot(e.target.checked)}
+                      className="w-4 h-4 text-sky-500 rounded border-slate-300 focus:ring-sky-500"
+                    />
+                    <span className="text-xs font-bold text-slate-700">将此商品加入「推荐爆款」列表</span>
+                  </label>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">运营亮点角标 (选填)</label>
                   <input

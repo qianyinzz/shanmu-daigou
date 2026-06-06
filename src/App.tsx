@@ -28,6 +28,7 @@ function rowToProduct(row: api.ProductRow): Product {
     stock: Number(row.stock),
     limit: Number(row.purchase_limit || 0),
     sort_order: Number(row.sort_order || 0),
+    is_hot: Boolean(row.is_hot),
   };
 }
 
@@ -328,6 +329,7 @@ export default function App() {
         price: p.price,
         unit: '份',
         stock: p.stock,
+        is_hot: p.is_hot,
         description: p.description,
       })));
       await Promise.all([loadProducts(), loadCategories()]);
@@ -343,7 +345,9 @@ export default function App() {
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(searchText.toLowerCase()) ||
                           p.description.toLowerCase().includes(searchText.toLowerCase());
-    const matchesCategory = p.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'hot' 
+      ? (p.category === 'hot' || p.is_hot) 
+      : p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
