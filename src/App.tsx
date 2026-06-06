@@ -344,8 +344,9 @@ export default function App() {
           onDataChange={async () => { await Promise.all([loadProducts(), loadOrders(), loadCategories()]); }}
         />
       ) : (
-        <div className="flex-1 overflow-y-auto no-scrollbar relative h-full">
-          {/* Premium Branded Header Billboard Section */}
+        <div className="flex flex-col flex-1 relative h-full overflow-hidden">
+          <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">
+            {/* Premium Branded Header Billboard Section */}
           <div className="bg-gradient-to-br from-[#0c4088] to-[#041c40] text-white p-5 text-left select-none shadow-md relative overflow-hidden shrink-0">
             <div className="absolute -right-12 -top-12 w-32 h-32 rounded-full bg-sky-500/10 blur-2xl pointer-events-none" />
             <div className="absolute left-1/4 bottom-0 w-36 h-12 bg-sky-400/5 blur-xl pointer-events-none" />
@@ -484,8 +485,12 @@ export default function App() {
             </div>
           </div>
 
-          {/* Floating Cart Bar */}
-          {cartTotalQty > 0 && (
+          {/* Bottom spacer when cart is visible */}
+          {cartTotalQty > 0 && <div className="h-24 shrink-0" />}
+        </div>
+
+        {/* Floating Cart Bar */}
+        {cartTotalQty > 0 && (
             <div className="absolute bottom-4 left-4 right-4 z-40">
               <div
                 onClick={() => setIsCartOpen(true)}
@@ -532,8 +537,6 @@ export default function App() {
             <MessageCircle size={18} />
           </button>
 
-          {/* Bottom spacer when cart is visible */}
-          {cartTotalQty > 0 && <div className="h-20 shrink-0" />}
         </div>
       )}
 
